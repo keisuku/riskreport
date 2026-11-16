@@ -1,0 +1,8 @@
+{
+  "name": "riskreport",
+  "private": true,
+  "version": "1.0.0",
+  "description": "リスクレポート基盤：診断アプリ・Excel様式・レポートを単一HTMLで提供する",
+  "scripts": { "build": "node scripts/build.mjs" },
+  "devDependencies": { "exceljs": "4.4.0" }
+}
