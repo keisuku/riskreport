@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>リスクレポート基盤 ─ 診断・Excel様式・レポート</title>
+<meta name="description" content="企業向けリスクエンジニアリング・レポートを作る基盤。1つのデータから簡易版と網羅版を出力します。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="#home"><i>検</i><span>リスクレポート基盤</span></a><nav id="nav" aria-label="画面"></nav><div id="casename"></div></header>
+<main id="app">
+<section class="view" id="v-home"></section>
+<section class="view" id="v-quick"></section>
+<section class="view" id="v-data"></section>
+<section class="view" id="v-proposals"></section>
+<section class="view" id="v-report"></section>
+<section class="view" id="v-ai"></section>
+<section class="view" id="v-settings"></section>
+</main>
+<div id="scrim"></div>
+<aside id="drawer" tabindex="-1" aria-label="リスクの詳細"></aside>
+<noscript>このアプリはJavaScriptを有効にして開いてください。</noscript>
+
+<!-- ===== データ定義（コードではなくデータで持つ5つ）。ここに1行足すと、Excel様式・画面・レポートに反映されます ===== -->
+<script type="application/json" id="def-questions">/*__DEF_questions__*/</script>
+<script type="application/json" id="def-risks">/*__DEF_risks__*/</script>
+<script type="application/json" id="def-coefficients">/*__DEF_coefficients__*/</script>
+<script type="application/json" id="def-industries">/*__DEF_industries__*/</script>
+<script type="application/json" id="def-chapters">/*__DEF_chapters__*/</script>
+
+<!--__EXCELJS__-->
+<script>
+/*__JS__*/
+</script>
+<script>
+(function(){try{RR.start()}catch(e){console.error(e);document.getElementById('v-home').classList.add('on');document.getElementById('v-home').innerHTML='<p style="padding:2em">起動できませんでした：'+String(e&&e.message||e).replace(/</g,'&lt;')+'</p>'}})();
+</script>
+</body>
+</html>

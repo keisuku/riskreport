@@ -49,11 +49,12 @@
     let items = (o.items || R.headline).slice();
     const maxN = o.max || (narrow ? 14 : 30);
     items.sort((a, b) => b.state(L)[st].loss - a.state(L)[st].loss || b.loss[L] - a.loss[L]);
-    const rest = items.length > maxN ? items.length - maxN : 0; items = items.slice(0, maxN);
+    const all = items.length; if (items.length > 12 && R.net > 0) { const big = items.filter((i) => i.state(L)[st].loss >= R.net * 0.001); if (big.length >= 6) items = big; }
+    items = items.slice(0, maxN); const rest = all - items.length;
     const colW = narrow ? Math.min(150, W * 0.42) : Math.min(210, W * 0.235);
     const mT = 26, mB = 46; const axisW = 34;
     const x0 = (narrow ? 0 : colW + 10) + axisW, x1 = W - colW - 10;
-    const pw = x1 - x0; const ph = Math.max(narrow ? 420 : 360, Math.min(o.h || 9999, Math.max(pw * 0.78, (Math.ceil(items.length / (narrow ? 1 : 2)) + 1) * lh)));
+    const pw = x1 - x0; const ph = Math.max(narrow ? 420 : 430, Math.min(pw * 0.86, 620), (Math.ceil(items.length / (narrow ? 1 : 2)) + 1) * lh);
     const H = mT + ph + mB; const y0 = mT, y1 = mT + ph;
     const X = (f) => x0 + (RR.freqPos(f) / 5) * pw, Y = (pos) => y1 - (pos / 5) * ph;
     const maxLoss = Math.max(1, ...R.items.map((i) => i.lossA[L]));
@@ -69,7 +70,7 @@
       if (!narrow) s += `<text class="t-axis sub" x="${x0 + 5}" y="${y1 - ((i + 1) * ph) / 5 + 12}">${E(il[i])}</text>`;
     }
     s += `<text class="t-axis ttl" x="${(x0 + x1) / 2}" y="${H - 5}" text-anchor="middle">頻度 →（右ほど起きやすい）</text>`;
-    s += `<text class="t-axis ttl" transform="translate(${x0 - 24},${(y0 + y1) / 2}) rotate(-90)" text-anchor="middle">影響の大きさ →（上ほど重い）</text>`;
+    s += `<text class="t-axis ttl" x="${x0 - 14}" y="${y0 - 10}">↑ 影響の大きさ（上ほど重い）</text>`;
     /* 会社の体力の線 */
     const capLine = (v, label, cls) => { if (!(v > 0) || !(R.net > 0)) return ''; const y = Y(RR.impactScore(v, R.net).pos); return `<line class="cap ${cls}" x1="${x0}" y1="${y}" x2="${x1}" y2="${y}"/><text class="t-cap" x="${x1 - 5}" y="${y - 4}" text-anchor="end">${E(label)} ${E(RR.money(v))}</text>`; };
     s += capLine(R.retention, '自己負担できる額', 'ret') + capLine(R.net, '純資産', 'net');
@@ -88,7 +89,7 @@
     pts.forEach((p) => (s += labelSvg(p, { fs, lh, colW })));
     s += `</svg>`;
     const used = [...new Set(items.map((i) => i.domain))];
-    const legend = `<div class="viz-legend">${RR.domains.filter((d) => used.includes(d.id)).map((d) => `<span><i style="background:${dcol(d.id)}"></i>${E(d.label)}</span>`).join('')}<span class="lg-note">円の大きさ＝${st === 'A' ? '損害額' : '保険で賄えない額'}（${E(RR.levelShort[L])}）${st !== 'A' ? '　▲＝備えの空白' : ''}${o.from ? `　○→●＝${E(stateName[o.from])}からの移動` : ''}${rest ? `　ほか${rest}件は登録簿に記載` : ''}</span></div>`;
+    const legend = `<div class="viz-legend">${RR.domains.filter((d) => used.includes(d.id)).map((d) => `<span><i style="background:${dcol(d.id)}"></i>${E(d.label)}</span>`).join('')}<span class="lg-note">円の大きさ＝${st === 'A' ? '損害額' : '保険で賄えない額'}（${E(RR.levelShort[L])}）${st !== 'A' ? '　▲＝備えの空白' : ''}${o.from ? `　○→●＝${E(stateName[o.from])}からの移動` : ''}${rest ? `　ほか${rest}件（損害の小さいもの）は登録簿に記載` : ''}</span></div>`;
     return { svg: s, legend, count: items.length, rest };
   };
 
@@ -115,7 +116,7 @@
     for (let e = Math.log10(lo); e <= Math.log10(hi) + 1e-9; e++) { const v = Math.pow(10, e); s += `<line class="grid faint" x1="${x0}" y1="${Y(v)}" x2="${x1}" y2="${Y(v)}"/><text class="t-axis" x="${x0 - 7}" y="${Y(v) + 4}" text-anchor="end">${E(C.short(v))}</text>`; }
     RR.prepLevels.forEach((p, i) => { const t = p.replace(/^\d\s*/, ''); s += `<text class="t-axis" x="${x0 + ((i + 0.5) * pw) / 4}" y="${y1 + 14}" text-anchor="middle">${i + 1}</text><text class="t-axis sub" x="${x0 + ((i + 0.5) * pw) / 4}" y="${y1 + 26}" text-anchor="middle">${E(narrow ? fit(t, 9.5, pw / 4 - 2) : t)}</text>`; });
     s += `<text class="t-axis ttl" x="${(x0 + x1) / 2}" y="${H - 5}" text-anchor="middle">代替手段の段階 →（右ほど備えが進んでいる）</text>`;
-    s += `<text class="t-axis ttl" transform="translate(${x0 - 40},${(y0 + y1) / 2}) rotate(-90)" text-anchor="middle">最悪の場合の損害（円・対数目盛）</text>`;
+    s += `<text class="t-axis ttl" x="${x0 - 40}" y="${y0 - 10}">↑ 最悪の場合の損害（円・対数目盛）</text>`;
     const capLine = (v, label, cls) => (v > 0 && v >= lo && v <= hi ? `<line class="cap ${cls}" x1="${x0}" y1="${Y(v)}" x2="${x1}" y2="${Y(v)}"/><text class="t-cap" x="${x1 - 5}" y="${Y(v) - 4}" text-anchor="end">${E(label)} ${E(RR.money(v))}</text>` : '');
     s += capLine(R.retention, '自己負担できる額', 'ret') + capLine(R.net, '純資産', 'net');
     const pts = items.map((it) => ({ key: it.key, it, x: X(it), y: Y(it.loss[2]), r: rScale(it.uninsured[2], maxU, 4, narrow ? 15 : 20), l1: it.label.replace('｜', '・'), l2: `${RR.money(it.loss[2])}　代替${it.prep.alt || '未回答'}`, mark: it.gap ? '▲' : '' }));
@@ -204,7 +205,7 @@
     const fs = narrow ? 10.5 : 11.5, lh = fs * 2 + 7; const colW = narrow ? Math.min(150, W * 0.42) : Math.min(210, W * 0.235);
     const x0 = narrow ? 0 : colW + 10, x1 = W - colW - 10, pw = x1 - x0; const mT = 10;
     const lon0 = 128.6, lon1 = 146.2, lat0 = 30.6, lat1 = 45.8; const k = Math.cos((38 * Math.PI) / 180);
-    const sc = Math.min(pw / ((lon1 - lon0) * k), 9999); const ph = Math.max((lat1 - lat0) * sc, (Math.ceil(sites.length / (narrow ? 1 : 2)) + 1) * lh); const sc2 = Math.min(sc, ph / (lat1 - lat0));
+    const sc = Math.min(pw / ((lon1 - lon0) * k), (narrow ? 420 : 540) / (lat1 - lat0)); const ph = Math.max((lat1 - lat0) * sc, (Math.ceil(sites.length / (narrow ? 1 : 2)) + 1) * lh); const sc2 = Math.min(sc, ph / (lat1 - lat0));
     const ox = x0 + (pw - (lon1 - lon0) * k * sc2) / 2; const H = mT + ph + 10;
     const PX = (lon) => ox + (lon - lon0) * k * sc2, PY = (lat) => mT + (lat1 - lat) * sc2;
     let s = `<svg class="viz sitemap" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="拠点の略図">`;
