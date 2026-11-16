@@ -1,0 +1,46 @@
+{
+"version":"1.0.0",
+"packs":[
+ {"id":"製造","terms":{},"questions":[
+   {"id":"ix_mfg_mold","layer":"company","label":"金型・治具の保管","type":"select","opts":["複製あり・別拠点保管","自社のみ・1か所","取引先に預け"],"ex":"自社のみ・1か所","risks":["bi"],"fx":[{"r":"bi","k":"sev","m":{"自社のみ・1か所":1.1}}],"help":"金型が失われると、設備が無事でも生産を再開できません。"},
+   {"id":"ix_mfg_dust","layer":"company","label":"粉じん・油煙の清掃","type":"select","opts":["定期","不定期"],"ex":"定期","risks":["fire"],"fx":[{"r":"fire","k":"freq","m":{"不定期":0.25}}]}],
+  "risks":[{"id":"ix_mfg_machine","name":"基幹設備の故障","domain":"bi","scope":"company","formula":{"type":"revenueRate","rates":[0.2,1,3]},"baseFreq":3,"insurance":[],"scenario":"代えのきかない設備が故障し、部品の入手まで生産が止まる。","measures":["予備品の確保","保全計画の見直し","機械保険の検討"]}]},
+ {"id":"食品","terms":{"工程・ライン":"製造ライン"},"questions":[
+   {"id":"ix_food_haccp","layer":"company","label":"衛生管理（HACCP）の運用","type":"select","opts":["運用・記録あり","計画のみ","なし"],"ex":"運用・記録あり","risks":["ix_food_contam"],"fx":[{"r":"ix_food_contam","k":"freq","m":{"計画のみ":0.5,"なし":1}}],"help":"HACCPは、食品の安全を工程ごとに管理する手法です。"},
+   {"id":"ix_food_cold","layer":"company","label":"冷凍・冷蔵設備の停電対策","type":"select","opts":["非常用電源あり","なし"],"ex":"なし","risks":["bi"],"fx":[{"r":"bi","k":"sev","m":{"なし":1.1}}]}],
+  "risks":[{"id":"ix_food_contam","name":"異物混入・食中毒","domain":"liab","scope":"company","formula":{"type":"revenueRate","rates":[0.5,3,10]},"baseFreq":3,"insurance":["liability","recall"],"scenario":"異物混入や食中毒が発生し、回収・賠償・販売停止が重なる。","measures":["金属検出・X線検査の全数化","回収手順の訓練","アレルゲン表示の二重確認"]}]},
+ {"id":"建設","terms":{"工程・ライン":"工事・現場","工場":"事業所"},"questions":[
+   {"id":"ix_con_sub","layer":"company","label":"下請の安全管理","type":"select","opts":["書類と現場で確認","書類のみ","未確認"],"ex":"書類のみ","risks":["ix_con_third"],"fx":[{"r":"ix_con_third","k":"freq","m":{"書類のみ":0.25,"未確認":0.75}}]},
+   {"id":"ix_con_height","layer":"company","label":"高所作業の墜落防止","type":"select","opts":["徹底","不徹底"],"ex":"徹底","risks":["wc"],"fx":[{"r":"wc","k":"freq","m":{"不徹底":0.75}}]}],
+  "risks":[{"id":"ix_con_third","name":"工事中の第三者事故","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[10,100,500]},"baseFreq":3,"insurance":["liability"],"scenario":"工事中の資材落下や掘削で、通行人や隣接建物に損害を与える。","measures":["第三者災害防止の計画書","近隣の事前調査","請負賠償の限度額確認"]},
+           {"id":"ix_con_work","name":"工事目的物の損害","domain":"prop","scope":"company","formula":{"type":"revenueRate","rates":[0.2,1,4]},"baseFreq":3,"insurance":[],"scenario":"施工中の建物が火災・風水害で損傷し、やり直し費用を負担する。","measures":["工事保険の付保確認","台風前の養生手順"]}]},
+ {"id":"運輸・物流","terms":{"工程・ライン":"路線・業務","工場":"営業所"},"questions":[
+   {"id":"ix_log_hours","layer":"company","label":"運転時間・休息の管理","type":"select","opts":["記録計で管理","自己申告","未管理"],"ex":"記録計で管理","risks":["auto"],"fx":[{"r":"auto","k":"freq","m":{"自己申告":0.5,"未管理":1}}]},
+   {"id":"ix_log_cargo","layer":"company","label":"高額貨物の取扱い","type":"select","opts":["なし","あり"],"ex":"あり","risks":["ix_log_cargo_r"],"fx":[{"r":"ix_log_cargo_r","k":"sev","m":{"あり":1.5}}]}],
+  "risks":[{"id":"ix_log_cargo_r","name":"預かり貨物の損害","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[5,50,300]},"baseFreq":4,"insurance":["liability"],"scenario":"輸送中・保管中の事故で荷主の貨物を損傷し、賠償する。","measures":["受託貨物の補償限度額の確認","荷主との責任範囲の書面化","倉庫の防火・防犯"]}]},
+ {"id":"IT","terms":{"工程・ライン":"サービス・業務","工場":"事業所"},"questions":[
+   {"id":"ix_it_sla","layer":"company","label":"稼働保証（SLA）の違約条項","type":"select","opts":["上限あり","上限なし","条項なし"],"ex":"上限あり","risks":["ix_it_eo"],"fx":[{"r":"ix_it_eo","k":"sev","m":{"上限なし":1.5}}],"help":"SLAは、サービスの稼働率などを約束する取り決めです。"},
+   {"id":"ix_it_dr","layer":"company","label":"別地域での待機系","type":"select","opts":["あり・切替訓練済","あり","なし"],"ex":"あり","risks":["cyber_stop"],"fx":[{"r":"cyber_stop","k":"sev","m":{"なし":1.3,"あり・切替訓練済":0.8}}]}],
+  "risks":[{"id":"ix_it_eo","name":"納品物・サービスの不具合による賠償","domain":"liab","scope":"company","formula":{"type":"revenueRate","rates":[0.5,3,10]},"baseFreq":3,"insurance":["liability"],"scenario":"開発したシステムの不具合や障害で、顧客の業務が止まり賠償を求められる。","measures":["契約の賠償上限の明記","検収条件の文書化","業務過誤賠償の検討"]}]},
+ {"id":"卸売・商社","terms":{"工程・ライン":"商流・業務","工場":"倉庫"},"questions":[
+   {"id":"ix_wh_fx","layer":"company","label":"為替・価格変動の対応","type":"select","opts":["予約・転嫁の基準あり","都度判断"],"ex":"都度判断","risks":["ix_wh_stock"],"fx":[{"r":"ix_wh_stock","k":"freq","m":{"都度判断":0.5}}]},
+   {"id":"ix_wh_transit","layer":"company","label":"輸送中の貨物の保険","type":"select","opts":["自社で手配","相手任せ","不明"],"ex":"相手任せ","risks":["ix_wh_stock"],"fx":[{"r":"ix_wh_stock","k":"sev","m":{"不明":1.2}}]}],
+  "risks":[{"id":"ix_wh_stock","name":"輸送中・保管中の商品の損害","domain":"prop","scope":"company","formula":{"type":"revenueRate","rates":[0.1,0.8,3]},"baseFreq":3,"insurance":[],"scenario":"輸入貨物の事故や倉庫の被災で、商品が販売できなくなる。","measures":["貿易条件ごとの付保確認","保管先の分散"]}]},
+ {"id":"小売","terms":{"工程・ライン":"店舗・売場","工場":"店舗"},"questions":[
+   {"id":"ix_rt_floor","layer":"company","label":"店内の転倒防止（床・段差）","type":"select","opts":["点検記録あり","記録なし"],"ex":"記録なし","risks":["ix_rt_customer"],"fx":[{"r":"ix_rt_customer","k":"freq","m":{"記録なし":0.5}}]},
+   {"id":"ix_rt_pos","layer":"company","label":"決済端末・会員情報の管理","type":"select","opts":["基準に準拠","未確認"],"ex":"未確認","risks":["cyber_leak"],"fx":[{"r":"cyber_leak","k":"freq","m":{"未確認":0.5}}]}],
+  "risks":[{"id":"ix_rt_customer","name":"来店客の事故","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[3,30,150]},"baseFreq":4,"insurance":["liability"],"scenario":"店内での転倒や什器の倒れで来店客がけがをする。","measures":["床の点検記録","什器の固定","事故時の対応手順"]}]},
+ {"id":"不動産","terms":{"工程・ライン":"物件・業務","工場":"物件"},"questions":[
+   {"id":"ix_re_inspect","layer":"company","label":"外壁・設備の定期点検","type":"select","opts":["法定＋自主","法定のみ","遅れあり"],"ex":"法定のみ","risks":["ix_re_defect"],"fx":[{"r":"ix_re_defect","k":"freq","m":{"遅れあり":0.75}}]},
+   {"id":"ix_re_tenant","layer":"company","label":"最大テナントの賃料比率","type":"pct","ex":25,"risks":["credit"]}],
+  "risks":[{"id":"ix_re_defect","name":"建物の欠陥・管理不備による賠償","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[10,100,500]},"baseFreq":2,"insurance":["liability"],"scenario":"外壁の落下や設備の不具合で、入居者や通行人に損害を与える。","measures":["外壁調査の前倒し","施設賠償の限度額確認"]}]},
+ {"id":"医療・介護","terms":{"工程・ライン":"診療・サービス","工場":"施設"},"questions":[
+   {"id":"ix_med_report","layer":"company","label":"事故・ヒヤリハットの報告制度","type":"select","opts":["運用・分析あり","報告のみ","なし"],"ex":"報告のみ","risks":["ix_med_mal"],"fx":[{"r":"ix_med_mal","k":"freq","m":{"報告のみ":0.25,"なし":0.75}}]},
+   {"id":"ix_med_power","layer":"company","label":"非常用電源の稼働時間","type":"num","unit":"時間","ex":24,"risks":["bi"]}],
+  "risks":[{"id":"ix_med_mal","name":"医療・介護事故","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[10,100,300]},"baseFreq":3,"insurance":["liability"],"scenario":"診療・介護中の事故により、利用者や家族から賠償を求められる。","measures":["事故報告の分析と共有","転倒・誤薬の防止手順","賠償責任保険の限度額確認"]}]},
+ {"id":"飲食・宿泊","terms":{"工程・ライン":"店舗・施設","工場":"店舗"},"questions":[
+   {"id":"ix_fb_duct","layer":"company","label":"厨房の排気ダクト清掃","type":"select","opts":["年1回以上","不定期","未実施"],"ex":"不定期","risks":["fire"],"fx":[{"r":"fire","k":"freq","m":{"不定期":0.5,"未実施":0.75}}]},
+   {"id":"ix_fb_hygiene","layer":"company","label":"衛生管理の記録","type":"select","opts":["あり","なし"],"ex":"あり","risks":["ix_fb_poison"],"fx":[{"r":"ix_fb_poison","k":"freq","m":{"なし":0.75}}]}],
+  "risks":[{"id":"ix_fb_poison","name":"食中毒・営業停止","domain":"liab","scope":"company","formula":{"type":"revenueRate","rates":[0.3,2,8]},"baseFreq":3,"insurance":["liability"],"scenario":"食中毒が発生し、賠償と営業停止による減収が重なる。","measures":["加熱・保存温度の記録","体調不良者の就業制限","休業補償の確認"]}]}
+]
+}
