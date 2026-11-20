@@ -1,46 +1,2968 @@
 {
-"version":"1.0.0",
-"packs":[
- {"id":"製造","terms":{},"questions":[
-   {"id":"ix_mfg_mold","layer":"company","label":"金型・治具の保管","type":"select","opts":["複製あり・別拠点保管","自社のみ・1か所","取引先に預け"],"ex":"自社のみ・1か所","risks":["bi"],"fx":[{"r":"bi","k":"sev","m":{"自社のみ・1か所":1.1}}],"help":"金型が失われると、設備が無事でも生産を再開できません。"},
-   {"id":"ix_mfg_dust","layer":"company","label":"粉じん・油煙の清掃","type":"select","opts":["定期","不定期"],"ex":"定期","risks":["fire"],"fx":[{"r":"fire","k":"freq","m":{"不定期":0.25}}]}],
-  "risks":[{"id":"ix_mfg_machine","name":"基幹設備の故障","domain":"bi","scope":"company","formula":{"type":"revenueRate","rates":[0.2,1,3]},"baseFreq":3,"insurance":[],"scenario":"代えのきかない設備が故障し、部品の入手まで生産が止まる。","measures":["予備品の確保","保全計画の見直し","機械保険の検討"]}]},
- {"id":"食品","terms":{"工程・ライン":"製造ライン"},"questions":[
-   {"id":"ix_food_haccp","layer":"company","label":"衛生管理（HACCP）の運用","type":"select","opts":["運用・記録あり","計画のみ","なし"],"ex":"運用・記録あり","risks":["ix_food_contam"],"fx":[{"r":"ix_food_contam","k":"freq","m":{"計画のみ":0.5,"なし":1}}],"help":"HACCPは、食品の安全を工程ごとに管理する手法です。"},
-   {"id":"ix_food_cold","layer":"company","label":"冷凍・冷蔵設備の停電対策","type":"select","opts":["非常用電源あり","なし"],"ex":"なし","risks":["bi"],"fx":[{"r":"bi","k":"sev","m":{"なし":1.1}}]}],
-  "risks":[{"id":"ix_food_contam","name":"異物混入・食中毒","domain":"liab","scope":"company","formula":{"type":"revenueRate","rates":[0.5,3,10]},"baseFreq":3,"insurance":["liability","recall"],"scenario":"異物混入や食中毒が発生し、回収・賠償・販売停止が重なる。","measures":["金属検出・X線検査の全数化","回収手順の訓練","アレルゲン表示の二重確認"]}]},
- {"id":"建設","terms":{"工程・ライン":"工事・現場","工場":"事業所"},"questions":[
-   {"id":"ix_con_sub","layer":"company","label":"下請の安全管理","type":"select","opts":["書類と現場で確認","書類のみ","未確認"],"ex":"書類のみ","risks":["ix_con_third"],"fx":[{"r":"ix_con_third","k":"freq","m":{"書類のみ":0.25,"未確認":0.75}}]},
-   {"id":"ix_con_height","layer":"company","label":"高所作業の墜落防止","type":"select","opts":["徹底","不徹底"],"ex":"徹底","risks":["wc"],"fx":[{"r":"wc","k":"freq","m":{"不徹底":0.75}}]}],
-  "risks":[{"id":"ix_con_third","name":"工事中の第三者事故","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[10,100,500]},"baseFreq":3,"insurance":["liability"],"scenario":"工事中の資材落下や掘削で、通行人や隣接建物に損害を与える。","measures":["第三者災害防止の計画書","近隣の事前調査","請負賠償の限度額確認"]},
-           {"id":"ix_con_work","name":"工事目的物の損害","domain":"prop","scope":"company","formula":{"type":"revenueRate","rates":[0.2,1,4]},"baseFreq":3,"insurance":[],"scenario":"施工中の建物が火災・風水害で損傷し、やり直し費用を負担する。","measures":["工事保険の付保確認","台風前の養生手順"]}]},
- {"id":"運輸・物流","terms":{"工程・ライン":"路線・業務","工場":"営業所"},"questions":[
-   {"id":"ix_log_hours","layer":"company","label":"運転時間・休息の管理","type":"select","opts":["記録計で管理","自己申告","未管理"],"ex":"記録計で管理","risks":["auto"],"fx":[{"r":"auto","k":"freq","m":{"自己申告":0.5,"未管理":1}}]},
-   {"id":"ix_log_cargo","layer":"company","label":"高額貨物の取扱い","type":"select","opts":["なし","あり"],"ex":"あり","risks":["ix_log_cargo_r"],"fx":[{"r":"ix_log_cargo_r","k":"sev","m":{"あり":1.5}}]}],
-  "risks":[{"id":"ix_log_cargo_r","name":"預かり貨物の損害","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[5,50,300]},"baseFreq":4,"insurance":["liability"],"scenario":"輸送中・保管中の事故で荷主の貨物を損傷し、賠償する。","measures":["受託貨物の補償限度額の確認","荷主との責任範囲の書面化","倉庫の防火・防犯"]}]},
- {"id":"IT","terms":{"工程・ライン":"サービス・業務","工場":"事業所"},"questions":[
-   {"id":"ix_it_sla","layer":"company","label":"稼働保証（SLA）の違約条項","type":"select","opts":["上限あり","上限なし","条項なし"],"ex":"上限あり","risks":["ix_it_eo"],"fx":[{"r":"ix_it_eo","k":"sev","m":{"上限なし":1.5}}],"help":"SLAは、サービスの稼働率などを約束する取り決めです。"},
-   {"id":"ix_it_dr","layer":"company","label":"別地域での待機系","type":"select","opts":["あり・切替訓練済","あり","なし"],"ex":"あり","risks":["cyber_stop"],"fx":[{"r":"cyber_stop","k":"sev","m":{"なし":1.3,"あり・切替訓練済":0.8}}]}],
-  "risks":[{"id":"ix_it_eo","name":"納品物・サービスの不具合による賠償","domain":"liab","scope":"company","formula":{"type":"revenueRate","rates":[0.5,3,10]},"baseFreq":3,"insurance":["liability"],"scenario":"開発したシステムの不具合や障害で、顧客の業務が止まり賠償を求められる。","measures":["契約の賠償上限の明記","検収条件の文書化","業務過誤賠償の検討"]}]},
- {"id":"卸売・商社","terms":{"工程・ライン":"商流・業務","工場":"倉庫"},"questions":[
-   {"id":"ix_wh_fx","layer":"company","label":"為替・価格変動の対応","type":"select","opts":["予約・転嫁の基準あり","都度判断"],"ex":"都度判断","risks":["ix_wh_stock"],"fx":[{"r":"ix_wh_stock","k":"freq","m":{"都度判断":0.5}}]},
-   {"id":"ix_wh_transit","layer":"company","label":"輸送中の貨物の保険","type":"select","opts":["自社で手配","相手任せ","不明"],"ex":"相手任せ","risks":["ix_wh_stock"],"fx":[{"r":"ix_wh_stock","k":"sev","m":{"不明":1.2}}]}],
-  "risks":[{"id":"ix_wh_stock","name":"輸送中・保管中の商品の損害","domain":"prop","scope":"company","formula":{"type":"revenueRate","rates":[0.1,0.8,3]},"baseFreq":3,"insurance":[],"scenario":"輸入貨物の事故や倉庫の被災で、商品が販売できなくなる。","measures":["貿易条件ごとの付保確認","保管先の分散"]}]},
- {"id":"小売","terms":{"工程・ライン":"店舗・売場","工場":"店舗"},"questions":[
-   {"id":"ix_rt_floor","layer":"company","label":"店内の転倒防止（床・段差）","type":"select","opts":["点検記録あり","記録なし"],"ex":"記録なし","risks":["ix_rt_customer"],"fx":[{"r":"ix_rt_customer","k":"freq","m":{"記録なし":0.5}}]},
-   {"id":"ix_rt_pos","layer":"company","label":"決済端末・会員情報の管理","type":"select","opts":["基準に準拠","未確認"],"ex":"未確認","risks":["cyber_leak"],"fx":[{"r":"cyber_leak","k":"freq","m":{"未確認":0.5}}]}],
-  "risks":[{"id":"ix_rt_customer","name":"来店客の事故","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[3,30,150]},"baseFreq":4,"insurance":["liability"],"scenario":"店内での転倒や什器の倒れで来店客がけがをする。","measures":["床の点検記録","什器の固定","事故時の対応手順"]}]},
- {"id":"不動産","terms":{"工程・ライン":"物件・業務","工場":"物件"},"questions":[
-   {"id":"ix_re_inspect","layer":"company","label":"外壁・設備の定期点検","type":"select","opts":["法定＋自主","法定のみ","遅れあり"],"ex":"法定のみ","risks":["ix_re_defect"],"fx":[{"r":"ix_re_defect","k":"freq","m":{"遅れあり":0.75}}]},
-   {"id":"ix_re_tenant","layer":"company","label":"最大テナントの賃料比率","type":"pct","ex":25,"risks":["credit"]}],
-  "risks":[{"id":"ix_re_defect","name":"建物の欠陥・管理不備による賠償","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[10,100,500]},"baseFreq":2,"insurance":["liability"],"scenario":"外壁の落下や設備の不具合で、入居者や通行人に損害を与える。","measures":["外壁調査の前倒し","施設賠償の限度額確認"]}]},
- {"id":"医療・介護","terms":{"工程・ライン":"診療・サービス","工場":"施設"},"questions":[
-   {"id":"ix_med_report","layer":"company","label":"事故・ヒヤリハットの報告制度","type":"select","opts":["運用・分析あり","報告のみ","なし"],"ex":"報告のみ","risks":["ix_med_mal"],"fx":[{"r":"ix_med_mal","k":"freq","m":{"報告のみ":0.25,"なし":0.75}}]},
-   {"id":"ix_med_power","layer":"company","label":"非常用電源の稼働時間","type":"num","unit":"時間","ex":24,"risks":["bi"]}],
-  "risks":[{"id":"ix_med_mal","name":"医療・介護事故","domain":"liab","scope":"company","formula":{"type":"fixed","amounts":[10,100,300]},"baseFreq":3,"insurance":["liability"],"scenario":"診療・介護中の事故により、利用者や家族から賠償を求められる。","measures":["事故報告の分析と共有","転倒・誤薬の防止手順","賠償責任保険の限度額確認"]}]},
- {"id":"飲食・宿泊","terms":{"工程・ライン":"店舗・施設","工場":"店舗"},"questions":[
-   {"id":"ix_fb_duct","layer":"company","label":"厨房の排気ダクト清掃","type":"select","opts":["年1回以上","不定期","未実施"],"ex":"不定期","risks":["fire"],"fx":[{"r":"fire","k":"freq","m":{"不定期":0.5,"未実施":0.75}}]},
-   {"id":"ix_fb_hygiene","layer":"company","label":"衛生管理の記録","type":"select","opts":["あり","なし"],"ex":"あり","risks":["ix_fb_poison"],"fx":[{"r":"ix_fb_poison","k":"freq","m":{"なし":0.75}}]}],
-  "risks":[{"id":"ix_fb_poison","name":"食中毒・営業停止","domain":"liab","scope":"company","formula":{"type":"revenueRate","rates":[0.3,2,8]},"baseFreq":3,"insurance":["liability"],"scenario":"食中毒が発生し、賠償と営業停止による減収が重なる。","measures":["加熱・保存温度の記録","体調不良者の就業制限","休業補償の確認"]}]}
-]
+ "version": "2.0.0",
+ "groups": [
+  "製造業",
+  "建設・不動産",
+  "運輸・物流",
+  "卸売・小売",
+  "サービス",
+  "一次産業・エネルギー・環境"
+ ],
+ "packs": [
+  {
+   "id": "製造（金属・機械）",
+   "group": "製造業",
+   "aliases": [
+    "製造"
+   ],
+   "note": "火災・機械の故障・労働災害と、代えのきかない設備による長期の停止が中心です。",
+   "focus": [
+    "fire",
+    "bi",
+    "wc",
+    "lightning"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_mfg_mold",
+     "layer": "company",
+     "label": "金型・治具の保管",
+     "type": "select",
+     "opts": [
+      "複製あり・別拠点保管",
+      "自社のみ・1か所",
+      "取引先に預け"
+     ],
+     "ex": "自社のみ・1か所",
+     "risks": [
+      "bi"
+     ],
+     "fx": [
+      {
+       "r": "bi",
+       "k": "sev",
+       "m": {
+        "自社のみ・1か所": 1.1
+       }
+      }
+     ],
+     "help": "金型が失われると、設備が無事でも生産を再開できません。"
+    },
+    {
+     "id": "ix_mfg_dust",
+     "layer": "company",
+     "label": "粉じん・油煙の清掃",
+     "type": "select",
+     "opts": [
+      "定期",
+      "不定期"
+     ],
+     "ex": "定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.25
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_mfg_machine",
+     "name": "基幹設備の故障",
+     "domain": "bi",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.2,
+       1,
+       3
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "代えのきかない設備が故障し、部品の入手まで生産が止まる。",
+     "measures": [
+      "予備品の確保",
+      "保全計画の見直し",
+      "機械保険の検討"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "製造（自動車部品）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "納入先の生産ラインを止めたときの影響が大きく、事業中断・リコール・製品賠償が重点です。",
+   "focus": [
+    "bi",
+    "recall",
+    "pl",
+    "supplier",
+    "cyber_stop"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_mfg_mold",
+     "layer": "company",
+     "label": "金型・治具の保管",
+     "type": "select",
+     "opts": [
+      "複製あり・別拠点保管",
+      "自社のみ・1か所",
+      "取引先に預け"
+     ],
+     "ex": "自社のみ・1か所",
+     "risks": [
+      "bi"
+     ],
+     "fx": [
+      {
+       "r": "bi",
+       "k": "sev",
+       "m": {
+        "自社のみ・1か所": 1.1
+       }
+      }
+     ],
+     "help": "金型が失われると、設備が無事でも生産を再開できません。"
+    },
+    {
+     "id": "ix_mfg_dust",
+     "layer": "company",
+     "label": "粉じん・油煙の清掃",
+     "type": "select",
+     "opts": [
+      "定期",
+      "不定期"
+     ],
+     "ex": "定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.25
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_auto_jit",
+     "layer": "company",
+     "label": "納入先の在庫の持ち方",
+     "type": "select",
+     "opts": [
+      "ジャストインタイム（在庫ほぼなし）",
+      "数日分の在庫あり",
+      "1か月以上の在庫あり"
+     ],
+     "ex": "ジャストインタイム（在庫ほぼなし）",
+     "risks": [
+      "bi"
+     ],
+     "fx": [
+      {
+       "r": "bi",
+       "k": "sev",
+       "m": {
+        "ジャストインタイム（在庫ほぼなし）": 1.15
+       }
+      }
+     ],
+     "help": "納入先が在庫を持たない場合、こちらが止まるとすぐに納入先の生産が止まります。"
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_mfg_machine",
+     "name": "基幹設備の故障",
+     "domain": "bi",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.2,
+       1,
+       3
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "代えのきかない設備が故障し、部品の入手まで生産が止まる。",
+     "measures": [
+      "予備品の確保",
+      "保全計画の見直し",
+      "機械保険の検討"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "製造（電子部品・半導体）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "クリーンルーム・精密設備の汚染と停電、落雷による設備停止が重点です。",
+   "focus": [
+    "lightning",
+    "bi",
+    "quake",
+    "special"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_semi_cr",
+     "layer": "company",
+     "label": "クリーンルーム",
+     "type": "select",
+     "opts": [
+      "なし",
+      "あり",
+      "あり（全工程）"
+     ],
+     "ex": "あり",
+     "risks": [
+      "bi",
+      "lightning"
+     ],
+     "fx": [
+      {
+       "r": "bi",
+       "k": "sev",
+       "m": {
+        "あり": 1.1,
+        "あり（全工程）": 1.25
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_semi_ups",
+     "layer": "company",
+     "label": "停電・瞬低への備え（UPS・自家発電）",
+     "type": "select",
+     "opts": [
+      "主要設備に完備",
+      "一部",
+      "なし"
+     ],
+     "ex": "一部",
+     "risks": [
+      "lightning"
+     ],
+     "fx": [
+      {
+       "r": "lightning",
+       "k": "sev",
+       "m": {
+        "なし": 1.3,
+        "主要設備に完備": 0.8
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_mfg_machine",
+     "name": "基幹設備の故障",
+     "domain": "bi",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.2,
+       1,
+       3
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "代えのきかない設備が故障し、部品の入手まで生産が止まる。",
+     "measures": [
+      "予備品の確保",
+      "保全計画の見直し",
+      "機械保険の検討"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "製造（化学・樹脂）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "危険物による火災・爆発と、漏えいによる環境汚染・近隣への賠償が重点です。",
+   "focus": [
+    "fire",
+    "premises",
+    "lightning"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_chem_haz",
+     "layer": "company",
+     "label": "危険物の保有量",
+     "type": "select",
+     "opts": [
+      "少量",
+      "指定数量以上",
+      "大量（タンク・プラント）"
+     ],
+     "ex": "指定数量以上",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "大量（タンク・プラント）": 0.75,
+        "指定数量以上": 0.25
+       }
+      },
+      {
+       "r": "fire",
+       "k": "sev",
+       "m": {
+        "大量（タンク・プラント）": 1.3
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_chem_leak",
+     "layer": "company",
+     "label": "漏えい防止（防液堤・検知）",
+     "type": "select",
+     "opts": [
+      "整備済",
+      "一部",
+      "なし"
+     ],
+     "ex": "一部",
+     "risks": [
+      "ix_chem_env"
+     ],
+     "fx": [
+      {
+       "r": "ix_chem_env",
+       "k": "freq",
+       "m": {
+        "一部": 0.25,
+        "なし": 0.75
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_chem_env",
+     "name": "化学物質の漏えいによる環境汚染",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       20,
+       150,
+       800
+      ]
+     },
+     "baseFreq": 2,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "化学物質が土壌や河川に漏れ、浄化費用と近隣への賠償を負担する。",
+     "measures": [
+      "防液堤と漏えい検知の整備",
+      "排水の監視",
+      "環境汚染の補償の確認"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "製造（食品・飲料）",
+   "group": "製造業",
+   "aliases": [
+    "食品"
+   ],
+   "note": "異物混入・食中毒・アレルゲンによる回収と、冷凍冷蔵設備の停止が重点です。",
+   "focus": [
+    "recall",
+    "foodpoison",
+    "pl",
+    "bi"
+   ],
+   "terms": {
+    "工程・ライン": "製造ライン"
+   },
+   "questions": [
+    {
+     "id": "ix_food_haccp",
+     "layer": "company",
+     "label": "衛生管理（HACCP）の運用",
+     "type": "select",
+     "opts": [
+      "運用・記録あり",
+      "計画のみ",
+      "なし"
+     ],
+     "ex": "運用・記録あり",
+     "risks": [
+      "ix_food_contam"
+     ],
+     "fx": [
+      {
+       "r": "ix_food_contam",
+       "k": "freq",
+       "m": {
+        "計画のみ": 0.5,
+        "なし": 1
+       }
+      }
+     ],
+     "help": "HACCPは、食品の安全を工程ごとに管理する手法です。"
+    },
+    {
+     "id": "ix_food_cold",
+     "layer": "company",
+     "label": "冷凍・冷蔵設備の停電対策",
+     "type": "select",
+     "opts": [
+      "非常用電源あり",
+      "なし"
+     ],
+     "ex": "なし",
+     "risks": [
+      "bi"
+     ],
+     "fx": [
+      {
+       "r": "bi",
+       "k": "sev",
+       "m": {
+        "なし": 1.1
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_food_contam",
+     "name": "異物混入・食中毒",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.5,
+       3,
+       10
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability",
+      "recall"
+     ],
+     "scenario": "異物混入や食中毒が発生し、回収・賠償・販売停止が重なる。",
+     "measures": [
+      "金属検出・X線検査の全数化",
+      "回収手順の訓練",
+      "アレルゲン表示の二重確認"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "製造（医薬品・化粧品）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "品質問題による回収と健康被害の賠償、薬事規制への対応が重点です。",
+   "focus": [
+    "recall",
+    "pl",
+    "bi"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_ph_gmp",
+     "layer": "company",
+     "label": "品質管理基準（GMP等）の運用",
+     "type": "select",
+     "opts": [
+      "運用・監査あり",
+      "運用のみ",
+      "該当なし"
+     ],
+     "ex": "運用・監査あり",
+     "risks": [
+      "recall"
+     ],
+     "fx": [
+      {
+       "r": "recall",
+       "k": "freq",
+       "m": {
+        "運用のみ": 0.25
+       }
+      }
+     ]
+    }
+   ],
+   "risks": []
+  },
+  {
+   "id": "製造（印刷・紙）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "紙・インクの可燃物による火災と、受託データの漏えいが重点です。",
+   "focus": [
+    "fire",
+    "cyber_leak",
+    "bi"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_mfg_dust",
+     "layer": "company",
+     "label": "粉じん・油煙の清掃",
+     "type": "select",
+     "opts": [
+      "定期",
+      "不定期"
+     ],
+     "ex": "定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.25
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_print_data",
+     "layer": "company",
+     "label": "顧客から預かる個人情報（印刷・発送）",
+     "type": "select",
+     "opts": [
+      "なし",
+      "あり"
+     ],
+     "ex": "あり",
+     "risks": [
+      "cyber_leak"
+     ],
+     "fx": [
+      {
+       "r": "cyber_leak",
+       "k": "sev",
+       "m": {
+        "あり": 1.5
+       }
+      }
+     ]
+    }
+   ],
+   "risks": []
+  },
+  {
+   "id": "製造（繊維・衣料）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "可燃物の多い工場・倉庫の火災と、海外の縫製委託先の停止が重点です。",
+   "focus": [
+    "fire",
+    "supplier",
+    "credit_ovs"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_mfg_dust",
+     "layer": "company",
+     "label": "粉じん・油煙の清掃",
+     "type": "select",
+     "opts": [
+      "定期",
+      "不定期"
+     ],
+     "ex": "定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.25
+       }
+      }
+     ]
+    }
+   ],
+   "risks": []
+  },
+  {
+   "id": "製造（窯業・建材）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "高温の炉・乾燥設備による火災と、粉じん・重量物による労働災害が重点です。",
+   "focus": [
+    "fire",
+    "wc",
+    "bi"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_mfg_dust",
+     "layer": "company",
+     "label": "粉じん・油煙の清掃",
+     "type": "select",
+     "opts": [
+      "定期",
+      "不定期"
+     ],
+     "ex": "定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.25
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_mfg_machine",
+     "name": "基幹設備の故障",
+     "domain": "bi",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.2,
+       1,
+       3
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "代えのきかない設備が故障し、部品の入手まで生産が止まる。",
+     "measures": [
+      "予備品の確保",
+      "保全計画の見直し",
+      "機械保険の検討"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "製造（その他）",
+   "group": "製造業",
+   "aliases": [],
+   "note": "火災・自然災害による設備の損害と事業中断を中心に、製品の賠償も確認します。",
+   "focus": [
+    "fire",
+    "bi",
+    "pl"
+   ],
+   "terms": {},
+   "questions": [
+    {
+     "id": "ix_mfg_mold",
+     "layer": "company",
+     "label": "金型・治具の保管",
+     "type": "select",
+     "opts": [
+      "複製あり・別拠点保管",
+      "自社のみ・1か所",
+      "取引先に預け"
+     ],
+     "ex": "自社のみ・1か所",
+     "risks": [
+      "bi"
+     ],
+     "fx": [
+      {
+       "r": "bi",
+       "k": "sev",
+       "m": {
+        "自社のみ・1か所": 1.1
+       }
+      }
+     ],
+     "help": "金型が失われると、設備が無事でも生産を再開できません。"
+    },
+    {
+     "id": "ix_mfg_dust",
+     "layer": "company",
+     "label": "粉じん・油煙の清掃",
+     "type": "select",
+     "opts": [
+      "定期",
+      "不定期"
+     ],
+     "ex": "定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.25
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_mfg_machine",
+     "name": "基幹設備の故障",
+     "domain": "bi",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.2,
+       1,
+       3
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "代えのきかない設備が故障し、部品の入手まで生産が止まる。",
+     "measures": [
+      "予備品の確保",
+      "保全計画の見直し",
+      "機械保険の検討"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "建設（総合・土木）",
+   "group": "建設・不動産",
+   "aliases": [
+    "建設"
+   ],
+   "note": "工事中の第三者事故と労働災害、工事目的物の損害が重点です。",
+   "focus": [
+    "wc",
+    "premises",
+    "ix_con_third"
+   ],
+   "terms": {
+    "工程・ライン": "工事・現場",
+    "工場": "事業所"
+   },
+   "questions": [
+    {
+     "id": "ix_con_sub",
+     "layer": "company",
+     "label": "下請の安全管理",
+     "type": "select",
+     "opts": [
+      "書類と現場で確認",
+      "書類のみ",
+      "未確認"
+     ],
+     "ex": "書類のみ",
+     "risks": [
+      "ix_con_third"
+     ],
+     "fx": [
+      {
+       "r": "ix_con_third",
+       "k": "freq",
+       "m": {
+        "書類のみ": 0.25,
+        "未確認": 0.75
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_con_height",
+     "layer": "company",
+     "label": "高所作業の墜落防止",
+     "type": "select",
+     "opts": [
+      "徹底",
+      "不徹底"
+     ],
+     "ex": "徹底",
+     "risks": [
+      "wc"
+     ],
+     "fx": [
+      {
+       "r": "wc",
+       "k": "freq",
+       "m": {
+        "不徹底": 0.75
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_con_third",
+     "name": "工事中の第三者事故",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       10,
+       100,
+       500
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "工事中の資材落下や掘削で、通行人や隣接建物に損害を与える。",
+     "measures": [
+      "第三者災害防止の計画書",
+      "近隣の事前調査",
+      "請負賠償の限度額確認"
+     ]
+    },
+    {
+     "id": "ix_con_work",
+     "name": "工事目的物の損害",
+     "domain": "prop",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.2,
+       1,
+       4
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "施工中の建物が火災・風水害で損傷し、やり直し費用を負担する。",
+     "measures": [
+      "工事保険の付保確認",
+      "台風前の養生手順"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "建設（設備・電気工事）",
+   "group": "建設・不動産",
+   "aliases": [],
+   "note": "施工ミスによる漏水・火災の賠償と、高所作業の労働災害が重点です。",
+   "focus": [
+    "wc",
+    "ix_con_third",
+    "premises"
+   ],
+   "terms": {
+    "工程・ライン": "工事・現場",
+    "工場": "事業所"
+   },
+   "questions": [
+    {
+     "id": "ix_con_height",
+     "layer": "company",
+     "label": "高所作業の墜落防止",
+     "type": "select",
+     "opts": [
+      "徹底",
+      "不徹底"
+     ],
+     "ex": "徹底",
+     "risks": [
+      "wc"
+     ],
+     "fx": [
+      {
+       "r": "wc",
+       "k": "freq",
+       "m": {
+        "不徹底": 0.75
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_eq_after",
+     "layer": "company",
+     "label": "引き渡し後の不具合（漏水など）の発生",
+     "type": "select",
+     "opts": [
+      "なし",
+      "年に数件",
+      "多い"
+     ],
+     "ex": "年に数件",
+     "risks": [
+      "ix_con_third"
+     ],
+     "fx": [
+      {
+       "r": "ix_con_third",
+       "k": "freq",
+       "m": {
+        "年に数件": 0.25,
+        "多い": 0.75
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_con_third",
+     "name": "工事中の第三者事故",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       10,
+       100,
+       500
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "工事中の資材落下や掘削で、通行人や隣接建物に損害を与える。",
+     "measures": [
+      "第三者災害防止の計画書",
+      "近隣の事前調査",
+      "請負賠償の限度額確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "不動産（賃貸・管理）",
+   "group": "建設・不動産",
+   "aliases": [
+    "不動産"
+   ],
+   "note": "建物の管理不備による事故の賠償、自然災害による建物の損害、テナントの賃料滞納が重点です。",
+   "focus": [
+    "ix_re_defect",
+    "flood",
+    "quake",
+    "wind",
+    "credit_dom"
+   ],
+   "terms": {
+    "工程・ライン": "物件・業務",
+    "工場": "物件"
+   },
+   "questions": [
+    {
+     "id": "ix_re_inspect",
+     "layer": "company",
+     "label": "外壁・設備の定期点検",
+     "type": "select",
+     "opts": [
+      "法定＋自主",
+      "法定のみ",
+      "遅れあり"
+     ],
+     "ex": "法定のみ",
+     "risks": [
+      "ix_re_defect"
+     ],
+     "fx": [
+      {
+       "r": "ix_re_defect",
+       "k": "freq",
+       "m": {
+        "遅れあり": 0.75
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_re_tenant",
+     "layer": "company",
+     "label": "最大テナントの賃料比率",
+     "type": "pct",
+     "ex": 25,
+     "risks": [
+      "credit"
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_re_defect",
+     "name": "建物の欠陥・管理不備による賠償",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       10,
+       100,
+       500
+      ]
+     },
+     "baseFreq": 2,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "外壁の落下や設備の不具合で、入居者や通行人に損害を与える。",
+     "measures": [
+      "外壁調査の前倒し",
+      "施設賠償の限度額確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "ビル管理・警備・清掃",
+   "group": "建設・不動産",
+   "aliases": [],
+   "note": "受託業務中の事故・過失による施設やテナントへの賠償と、従業員の労働災害が重点です。",
+   "focus": [
+    "premises",
+    "wc",
+    "epl"
+   ],
+   "terms": {
+    "工場": "事業所",
+    "工程・ライン": "受託業務"
+   },
+   "questions": [
+    {
+     "id": "ix_bm_key",
+     "layer": "company",
+     "label": "顧客の鍵・設備の管理",
+     "type": "select",
+     "opts": [
+      "なし",
+      "あり"
+     ],
+     "ex": "あり",
+     "risks": [
+      "premises"
+     ],
+     "fx": [
+      {
+       "r": "premises",
+       "k": "sev",
+       "m": {
+        "あり": 1.3
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_bm_err",
+     "name": "受託業務の過失による賠償",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       5,
+       50,
+       300
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "設備管理や警備の過失で、顧客の施設やテナントに損害を与える。",
+     "measures": [
+      "作業手順と点検記録",
+      "受託者賠償の補償額の確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "運輸（トラック）",
+   "group": "運輸・物流",
+   "aliases": [
+    "運輸・物流"
+   ],
+   "note": "交通事故と運転者の労務管理、預かり貨物の損害が重点です。",
+   "focus": [
+    "auto",
+    "ix_log_cargo_r",
+    "wc",
+    "epl"
+   ],
+   "terms": {
+    "工程・ライン": "路線・業務",
+    "工場": "営業所"
+   },
+   "questions": [
+    {
+     "id": "ix_log_hours",
+     "layer": "company",
+     "label": "運転時間・休息の管理",
+     "type": "select",
+     "opts": [
+      "記録計で管理",
+      "自己申告",
+      "未管理"
+     ],
+     "ex": "記録計で管理",
+     "risks": [
+      "auto"
+     ],
+     "fx": [
+      {
+       "r": "auto",
+       "k": "freq",
+       "m": {
+        "自己申告": 0.5,
+        "未管理": 1
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_log_cargo",
+     "layer": "company",
+     "label": "高額貨物の取扱い",
+     "type": "select",
+     "opts": [
+      "なし",
+      "あり"
+     ],
+     "ex": "あり",
+     "risks": [
+      "ix_log_cargo_r"
+     ],
+     "fx": [
+      {
+       "r": "ix_log_cargo_r",
+       "k": "sev",
+       "m": {
+        "あり": 1.5
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_log_cargo_r",
+     "name": "預かり貨物の損害",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       5,
+       50,
+       300
+      ]
+     },
+     "baseFreq": 4,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "輸送中・保管中の事故で荷主の貨物を損傷し、賠償する。",
+     "measures": [
+      "受託貨物の補償限度額の確認",
+      "荷主との責任範囲の書面化",
+      "倉庫の防火・防犯"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "倉庫・物流センター",
+   "group": "運輸・物流",
+   "aliases": [],
+   "note": "大量の在庫を抱える倉庫の火災と、預かり品の賠償、フォークリフト事故が重点です。",
+   "focus": [
+    "fire",
+    "ix_log_cargo_r",
+    "wc",
+    "lightning"
+   ],
+   "terms": {
+    "工場": "倉庫",
+    "工程・ライン": "保管・出荷業務"
+   },
+   "questions": [
+    {
+     "id": "ix_log_cargo",
+     "layer": "company",
+     "label": "高額貨物の取扱い",
+     "type": "select",
+     "opts": [
+      "なし",
+      "あり"
+     ],
+     "ex": "あり",
+     "risks": [
+      "ix_log_cargo_r"
+     ],
+     "fx": [
+      {
+       "r": "ix_log_cargo_r",
+       "k": "sev",
+       "m": {
+        "あり": 1.5
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_log_cargo_r",
+     "name": "預かり貨物の損害",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       5,
+       50,
+       300
+      ]
+     },
+     "baseFreq": 4,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "輸送中・保管中の事故で荷主の貨物を損傷し、賠償する。",
+     "measures": [
+      "受託貨物の補償限度額の確認",
+      "荷主との責任範囲の書面化",
+      "倉庫の防火・防犯"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "冷凍・冷蔵倉庫",
+   "group": "運輸・物流",
+   "aliases": [],
+   "note": "停電・落雷・設備故障による温度逸脱で、預かり品がまとめて損害を受けることが重点です。",
+   "focus": [
+    "lightning",
+    "ix_log_cargo_r",
+    "fire"
+   ],
+   "terms": {
+    "工場": "倉庫"
+   },
+   "questions": [
+    {
+     "id": "ix_cold_power",
+     "layer": "company",
+     "label": "冷凍機の停電対策",
+     "type": "select",
+     "opts": [
+      "非常用電源あり",
+      "なし"
+     ],
+     "ex": "なし",
+     "risks": [
+      "ix_cold_spoil"
+     ],
+     "fx": [
+      {
+       "r": "ix_cold_spoil",
+       "k": "sev",
+       "m": {
+        "なし": 1.4
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_cold_ins",
+     "layer": "company",
+     "label": "断熱パネル（可燃性）",
+     "type": "select",
+     "opts": [
+      "不燃",
+      "可燃・一部",
+      "可燃"
+     ],
+     "ex": "可燃・一部",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "sev",
+       "m": {
+        "可燃": 1.3,
+        "可燃・一部": 1.1
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_cold_spoil",
+     "name": "温度逸脱による預かり品の損害",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       10,
+       80,
+       400
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "冷凍機の故障や停電で庫内の温度が上がり、預かり品が廃棄になる。",
+     "measures": [
+      "冷凍機の二重化",
+      "温度監視と警報",
+      "受託者賠償の補償額の確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "卸売（国内）",
+   "group": "卸売・小売",
+   "aliases": [
+    "卸売・商社"
+   ],
+   "note": "取引先の倒産による貸倒れ（与信）が最も重要です。在庫の保管中の損害も確認します。",
+   "focus": [
+    "credit_dom",
+    "ix_wh_stock",
+    "cyber_stop",
+    "fraud"
+   ],
+   "terms": {
+    "工程・ライン": "商流・業務",
+    "工場": "倉庫"
+   },
+   "questions": [
+    {
+     "id": "ix_ws_terms",
+     "layer": "company",
+     "label": "主要な取引先との回収条件（平均の回収期間）",
+     "type": "select",
+     "opts": [
+      "30日以内",
+      "31〜90日",
+      "91日以上"
+     ],
+     "ex": "31〜90日",
+     "risks": [
+      "credit_dom"
+     ],
+     "fx": [
+      {
+       "r": "credit_dom",
+       "k": "sev",
+       "m": {
+        "91日以上": 1.3
+       }
+      }
+     ],
+     "help": "回収までの期間が長いほど、倒産時に回収できない額が大きくなります。"
+    },
+    {
+     "id": "ix_ws_top10",
+     "layer": "company",
+     "label": "上位10社の売上比率",
+     "type": "pct",
+     "ex": 55,
+     "risks": [
+      "credit_dom"
+     ],
+     "fx": [
+      {
+       "r": "credit_dom",
+       "k": "freq",
+       "ge": [
+        [
+         50,
+         0.25
+        ],
+        [
+         80,
+         0.5
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "id": "ix_ws_limit",
+     "layer": "company",
+     "label": "与信限度額を超えた取引",
+     "type": "select",
+     "opts": [
+      "ない",
+      "時々ある",
+      "常態化している"
+     ],
+     "ex": "時々ある",
+     "risks": [
+      "credit_dom"
+     ],
+     "fx": [
+      {
+       "r": "credit_dom",
+       "k": "freq",
+       "m": {
+        "時々ある": 0.25,
+        "常態化している": 0.75
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_wh_stock",
+     "name": "輸送中・保管中の商品の損害",
+     "domain": "prop",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.1,
+       0.8,
+       3
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "輸入貨物の事故や倉庫の被災で、商品が販売できなくなる。",
+     "measures": [
+      "貿易条件ごとの付保確認",
+      "保管先の分散"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "商社（輸出入）",
+   "group": "卸売・小売",
+   "aliases": [],
+   "note": "国内と海外の両方の与信（貸倒れ）、為替と輸送中の貨物の損害が重要です。輸出先の国のリスクも見ます。",
+   "focus": [
+    "credit_ovs",
+    "credit_dom",
+    "ix_wh_stock",
+    "travel"
+   ],
+   "terms": {
+    "工程・ライン": "商流・業務",
+    "工場": "倉庫"
+   },
+   "questions": [
+    {
+     "id": "ix_ws_terms",
+     "layer": "company",
+     "label": "主要な取引先との回収条件（平均の回収期間）",
+     "type": "select",
+     "opts": [
+      "30日以内",
+      "31〜90日",
+      "91日以上"
+     ],
+     "ex": "31〜90日",
+     "risks": [
+      "credit_dom"
+     ],
+     "fx": [
+      {
+       "r": "credit_dom",
+       "k": "sev",
+       "m": {
+        "91日以上": 1.3
+       }
+      }
+     ],
+     "help": "回収までの期間が長いほど、倒産時に回収できない額が大きくなります。"
+    },
+    {
+     "id": "ix_wh_fx",
+     "layer": "company",
+     "label": "為替・価格変動の対応",
+     "type": "select",
+     "opts": [
+      "予約・転嫁の基準あり",
+      "都度判断"
+     ],
+     "ex": "都度判断",
+     "risks": [
+      "ix_wh_stock"
+     ],
+     "fx": [
+      {
+       "r": "ix_wh_stock",
+       "k": "freq",
+       "m": {
+        "都度判断": 0.5
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_wh_transit",
+     "layer": "company",
+     "label": "輸送中の貨物の保険",
+     "type": "select",
+     "opts": [
+      "自社で手配",
+      "相手任せ",
+      "不明"
+     ],
+     "ex": "相手任せ",
+     "risks": [
+      "ix_wh_stock"
+     ],
+     "fx": [
+      {
+       "r": "ix_wh_stock",
+       "k": "sev",
+       "m": {
+        "不明": 1.2
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_tr_country",
+     "layer": "company",
+     "label": "輸出先に、送金規制や政情不安のある国を含むか",
+     "type": "select",
+     "opts": [
+      "含まない",
+      "一部含む",
+      "主要な輸出先が該当"
+     ],
+     "ex": "一部含む",
+     "risks": [
+      "credit_ovs"
+     ],
+     "fx": [
+      {
+       "r": "credit_ovs",
+       "k": "freq",
+       "m": {
+        "一部含む": 0.25,
+        "主要な輸出先が該当": 0.75
+       }
+      },
+      {
+       "r": "credit_ovs",
+       "k": "sev",
+       "m": {
+        "主要な輸出先が該当": 1.3
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_wh_stock",
+     "name": "輸送中・保管中の商品の損害",
+     "domain": "prop",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.1,
+       0.8,
+       3
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "輸入貨物の事故や倉庫の被災で、商品が販売できなくなる。",
+     "measures": [
+      "貿易条件ごとの付保確認",
+      "保管先の分散"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "小売（店舗）",
+   "group": "卸売・小売",
+   "aliases": [
+    "小売"
+   ],
+   "note": "来店客の事故と、多店舗での自然災害・火災、決済情報の漏えいが重点です。",
+   "focus": [
+    "ix_rt_customer",
+    "cyber_leak",
+    "fire",
+    "fraud"
+   ],
+   "terms": {
+    "工程・ライン": "店舗・売場",
+    "工場": "店舗"
+   },
+   "questions": [
+    {
+     "id": "ix_rt_floor",
+     "layer": "company",
+     "label": "店内の転倒防止（床・段差）",
+     "type": "select",
+     "opts": [
+      "点検記録あり",
+      "記録なし"
+     ],
+     "ex": "記録なし",
+     "risks": [
+      "ix_rt_customer"
+     ],
+     "fx": [
+      {
+       "r": "ix_rt_customer",
+       "k": "freq",
+       "m": {
+        "記録なし": 0.5
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_rt_pos",
+     "layer": "company",
+     "label": "決済端末・会員情報の管理",
+     "type": "select",
+     "opts": [
+      "基準に準拠",
+      "未確認"
+     ],
+     "ex": "未確認",
+     "risks": [
+      "cyber_leak"
+     ],
+     "fx": [
+      {
+       "r": "cyber_leak",
+       "k": "freq",
+       "m": {
+        "未確認": 0.5
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_rt_customer",
+     "name": "来店客の事故",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       3,
+       30,
+       150
+      ]
+     },
+     "baseFreq": 4,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "店内での転倒や什器の倒れで来店客がけがをする。",
+     "measures": [
+      "床の点検記録",
+      "什器の固定",
+      "事故時の対応手順"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "EC・通信販売",
+   "group": "卸売・小売",
+   "aliases": [],
+   "note": "サイトの停止と顧客情報の漏えい、物流委託先の停止が重点です。",
+   "focus": [
+    "cyber_stop",
+    "cyber_leak",
+    "supplier",
+    "pl"
+   ],
+   "terms": {
+    "工場": "物流拠点"
+   },
+   "questions": [
+    {
+     "id": "ix_ec_share",
+     "layer": "company",
+     "label": "売上のうちサイト経由の割合",
+     "type": "pct",
+     "ex": 90,
+     "risks": [
+      "cyber_stop"
+     ],
+     "fx": [
+      {
+       "r": "cyber_stop",
+       "k": "sev",
+       "ge": [
+        [
+         50,
+         1.1
+        ],
+        [
+         90,
+         1.25
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "id": "ix_ec_card",
+     "layer": "company",
+     "label": "カード情報の保持",
+     "type": "select",
+     "opts": [
+      "保持しない（決済代行）",
+      "保持する"
+     ],
+     "ex": "保持しない（決済代行）",
+     "risks": [
+      "cyber_leak"
+     ],
+     "fx": [
+      {
+       "r": "cyber_leak",
+       "k": "sev",
+       "m": {
+        "保持する": 1.8
+       }
+      }
+     ]
+    }
+   ],
+   "risks": []
+  },
+  {
+   "id": "飲食",
+   "group": "サービス",
+   "aliases": [
+    "飲食・宿泊"
+   ],
+   "note": "食中毒と火災（厨房のダクト）、来店客の事故が重点です。",
+   "focus": [
+    "foodpoison",
+    "fire",
+    "premises"
+   ],
+   "terms": {
+    "工程・ライン": "店舗・施設",
+    "工場": "店舗"
+   },
+   "questions": [
+    {
+     "id": "ix_fb_duct",
+     "layer": "company",
+     "label": "厨房の排気ダクト清掃",
+     "type": "select",
+     "opts": [
+      "年1回以上",
+      "不定期",
+      "未実施"
+     ],
+     "ex": "不定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.5,
+        "未実施": 0.75
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_fb_hygiene",
+     "layer": "company",
+     "label": "衛生管理の記録",
+     "type": "select",
+     "opts": [
+      "あり",
+      "なし"
+     ],
+     "ex": "あり",
+     "risks": [
+      "ix_fb_poison"
+     ],
+     "fx": [
+      {
+       "r": "ix_fb_poison",
+       "k": "freq",
+       "m": {
+        "なし": 0.75
+       }
+      }
+     ]
+    }
+   ],
+   "risks": []
+  },
+  {
+   "id": "宿泊",
+   "group": "サービス",
+   "aliases": [],
+   "note": "火災時の宿泊客の避難と、施設の事故・食中毒、自然災害による休業が重点です。",
+   "focus": [
+    "fire",
+    "premises",
+    "foodpoison",
+    "bi"
+   ],
+   "terms": {
+    "工場": "施設",
+    "工程・ライン": "客室・サービス"
+   },
+   "questions": [
+    {
+     "id": "ix_fb_duct",
+     "layer": "company",
+     "label": "厨房の排気ダクト清掃",
+     "type": "select",
+     "opts": [
+      "年1回以上",
+      "不定期",
+      "未実施"
+     ],
+     "ex": "不定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.5,
+        "未実施": 0.75
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_htl_evac",
+     "layer": "company",
+     "label": "夜間の避難誘導の体制",
+     "type": "select",
+     "opts": [
+      "訓練済",
+      "手順のみ",
+      "なし"
+     ],
+     "ex": "手順のみ",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "sev",
+       "m": {
+        "なし": 1.2
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_htl_guest",
+     "name": "宿泊客の事故・所持品の損害",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       3,
+       30,
+       150
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "館内での転倒や浴場での事故、預かった荷物の紛失で賠償を求められる。",
+     "measures": [
+      "浴場・階段の安全点検",
+      "預かり品の管理手順"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "医療（病院・診療所）",
+   "group": "サービス",
+   "aliases": [
+    "医療・介護"
+   ],
+   "note": "医療事故の賠償、停電・システム停止による診療の中断、サイバー攻撃が重点です。",
+   "focus": [
+    "ix_med_mal",
+    "cyber_stop",
+    "lightning"
+   ],
+   "terms": {
+    "工程・ライン": "診療・サービス",
+    "工場": "施設"
+   },
+   "questions": [
+    {
+     "id": "ix_med_report",
+     "layer": "company",
+     "label": "事故・ヒヤリハットの報告制度",
+     "type": "select",
+     "opts": [
+      "運用・分析あり",
+      "報告のみ",
+      "なし"
+     ],
+     "ex": "報告のみ",
+     "risks": [
+      "ix_med_mal"
+     ],
+     "fx": [
+      {
+       "r": "ix_med_mal",
+       "k": "freq",
+       "m": {
+        "報告のみ": 0.25,
+        "なし": 0.75
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_med_power",
+     "layer": "company",
+     "label": "非常用電源の稼働時間",
+     "type": "num",
+     "unit": "時間",
+     "ex": 24,
+     "risks": [
+      "bi"
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_med_mal",
+     "name": "医療・介護事故",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       10,
+       100,
+       300
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "診療・介護中の事故により、利用者や家族から賠償を求められる。",
+     "measures": [
+      "事故報告の分析と共有",
+      "転倒・誤薬の防止手順",
+      "賠償責任保険の限度額確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "介護・福祉",
+   "group": "サービス",
+   "aliases": [],
+   "note": "転倒・誤嚥などの介護事故と、職員の労働災害・メンタル、自然災害時の避難が重点です。",
+   "focus": [
+    "ix_med_mal",
+    "wc",
+    "epl",
+    "flood"
+   ],
+   "terms": {
+    "工程・ライン": "診療・サービス",
+    "工場": "施設"
+   },
+   "questions": [
+    {
+     "id": "ix_med_report",
+     "layer": "company",
+     "label": "事故・ヒヤリハットの報告制度",
+     "type": "select",
+     "opts": [
+      "運用・分析あり",
+      "報告のみ",
+      "なし"
+     ],
+     "ex": "報告のみ",
+     "risks": [
+      "ix_med_mal"
+     ],
+     "fx": [
+      {
+       "r": "ix_med_mal",
+       "k": "freq",
+       "m": {
+        "報告のみ": 0.25,
+        "なし": 0.75
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_care_evac",
+     "layer": "company",
+     "label": "避難確保計画（浸水・土砂の区域）",
+     "type": "select",
+     "opts": [
+      "作成・訓練済",
+      "作成のみ",
+      "未作成・対象外"
+     ],
+     "ex": "作成のみ",
+     "risks": [
+      "flood"
+     ],
+     "fx": [
+      {
+       "r": "flood",
+       "k": "sev",
+       "m": {
+        "未作成・対象外": 1.1
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_care_acc",
+     "name": "介護事故（転倒・誤嚥）",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       10,
+       100,
+       300
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "利用者の転倒や誤嚥で事故が起き、家族から賠償を求められる。",
+     "measures": [
+      "事故報告の分析と共有",
+      "転倒・誤薬の防止手順",
+      "賠償責任保険の限度額確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "保育・教育",
+   "group": "サービス",
+   "aliases": [],
+   "note": "子ども・生徒の事故と、預かり中の食中毒・アレルギー事故が重点です。",
+   "focus": [
+    "ix_edu_child",
+    "foodpoison",
+    "epl"
+   ],
+   "terms": {
+    "工場": "施設",
+    "工程・ライン": "クラス・業務"
+   },
+   "questions": [
+    {
+     "id": "ix_edu_alg",
+     "layer": "company",
+     "label": "食物アレルギーへの対応手順",
+     "type": "select",
+     "opts": [
+      "手順と二重確認あり",
+      "手順のみ",
+      "なし"
+     ],
+     "ex": "手順のみ",
+     "risks": [
+      "ix_edu_child"
+     ],
+     "fx": [
+      {
+       "r": "ix_edu_child",
+       "k": "freq",
+       "m": {
+        "なし": 0.75
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_edu_child",
+     "name": "預かり中の子ども・生徒の事故",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       5,
+       50,
+       300
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "遊具や送迎、校外活動、アレルギー事故で子どもがけがをし、保護者から賠償を求められる。",
+     "measures": [
+      "安全点検と記録",
+      "送迎時の確認手順",
+      "アレルギー対応の二重確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "人材派遣・請負",
+   "group": "サービス",
+   "aliases": [],
+   "note": "派遣先・請負先での事故や損害の賠償と、雇用をめぐる争いが重点です。",
+   "focus": [
+    "ix_hr_dispatch",
+    "epl",
+    "wc"
+   ],
+   "terms": {
+    "工場": "事業所",
+    "工程・ライン": "派遣・請負業務"
+   },
+   "questions": [
+    {
+     "id": "ix_hr_n",
+     "layer": "company",
+     "label": "派遣・請負の従事者数",
+     "type": "num",
+     "unit": "人",
+     "ex": 300,
+     "risks": [
+      "ix_hr_dispatch"
+     ],
+     "fx": [
+      {
+       "r": "ix_hr_dispatch",
+       "k": "freq",
+       "ge": [
+        [
+         100,
+         0.25
+        ],
+        [
+         500,
+         0.75
+        ]
+       ]
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_hr_dispatch",
+     "name": "派遣先・請負先での損害の賠償",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       5,
+       30,
+       200
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "派遣社員が派遣先の設備を壊したり、情報を漏らしたりして賠償を求められる。",
+     "measures": [
+      "派遣先との責任分担の契約",
+      "受託者賠償の確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "情報通信（ソフトウェア・SaaS）",
+   "group": "サービス",
+   "aliases": [
+    "IT"
+   ],
+   "note": "納品物やサービスの不具合による賠償、情報漏えい、サービス停止が重点です。",
+   "focus": [
+    "ix_it_eo",
+    "cyber_leak",
+    "cyber_stop"
+   ],
+   "terms": {
+    "工程・ライン": "サービス・業務",
+    "工場": "事業所"
+   },
+   "questions": [
+    {
+     "id": "ix_it_sla",
+     "layer": "company",
+     "label": "稼働保証（SLA）の違約条項",
+     "type": "select",
+     "opts": [
+      "上限あり",
+      "上限なし",
+      "条項なし"
+     ],
+     "ex": "上限あり",
+     "risks": [
+      "ix_it_eo"
+     ],
+     "fx": [
+      {
+       "r": "ix_it_eo",
+       "k": "sev",
+       "m": {
+        "上限なし": 1.5
+       }
+      }
+     ],
+     "help": "SLAは、サービスの稼働率などを約束する取り決めです。"
+    },
+    {
+     "id": "ix_it_dr",
+     "layer": "company",
+     "label": "別地域での待機系",
+     "type": "select",
+     "opts": [
+      "あり・切替訓練済",
+      "あり",
+      "なし"
+     ],
+     "ex": "あり",
+     "risks": [
+      "cyber_stop"
+     ],
+     "fx": [
+      {
+       "r": "cyber_stop",
+       "k": "sev",
+       "m": {
+        "なし": 1.3,
+        "あり・切替訓練済": 0.8
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_it_eo",
+     "name": "納品物・サービスの不具合による賠償",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.5,
+       3,
+       10
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "開発したシステムの不具合や障害で、顧客の業務が止まり賠償を求められる。",
+     "measures": [
+      "契約の賠償上限の明記",
+      "検収条件の文書化",
+      "業務過誤賠償の検討"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "データセンター・通信",
+   "group": "サービス",
+   "aliases": [],
+   "note": "停電・落雷・冷却停止によるサービス停止と、預かりデータの損害が重点です。",
+   "focus": [
+    "lightning",
+    "cyber_stop",
+    "ix_it_eo",
+    "bi"
+   ],
+   "terms": {
+    "工程・ライン": "サービス・業務",
+    "工場": "事業所"
+   },
+   "questions": [
+    {
+     "id": "ix_it_dr",
+     "layer": "company",
+     "label": "別地域での待機系",
+     "type": "select",
+     "opts": [
+      "あり・切替訓練済",
+      "あり",
+      "なし"
+     ],
+     "ex": "あり",
+     "risks": [
+      "cyber_stop"
+     ],
+     "fx": [
+      {
+       "r": "cyber_stop",
+       "k": "sev",
+       "m": {
+        "なし": 1.3,
+        "あり・切替訓練済": 0.8
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_dc_power",
+     "layer": "company",
+     "label": "電源・冷却の冗長化",
+     "type": "select",
+     "opts": [
+      "二系統以上・試験済",
+      "二系統",
+      "単一"
+     ],
+     "ex": "二系統",
+     "risks": [
+      "lightning",
+      "bi"
+     ],
+     "fx": [
+      {
+       "r": "lightning",
+       "k": "sev",
+       "m": {
+        "単一": 1.5,
+        "二系統以上・試験済": 0.7
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_it_eo",
+     "name": "納品物・サービスの不具合による賠償",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.5,
+       3,
+       10
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability"
+     ],
+     "scenario": "開発したシステムの不具合や障害で、顧客の業務が止まり賠償を求められる。",
+     "measures": [
+      "契約の賠償上限の明記",
+      "検収条件の文書化",
+      "業務過誤賠償の検討"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "広告・出版・メディア",
+   "group": "サービス",
+   "aliases": [],
+   "note": "著作権・肖像権の侵害や名誉毀損による賠償と、情報漏えいが重点です。",
+   "focus": [
+    "ix_media_ip",
+    "cyber_leak"
+   ],
+   "terms": {
+    "工場": "事業所",
+    "工程・ライン": "制作業務"
+   },
+   "questions": [
+    {
+     "id": "ix_media_check",
+     "layer": "company",
+     "label": "掲載前の権利確認の手順",
+     "type": "select",
+     "opts": [
+      "あり（法務確認）",
+      "担当者任せ",
+      "なし"
+     ],
+     "ex": "担当者任せ",
+     "risks": [
+      "ix_media_ip"
+     ],
+     "fx": [
+      {
+       "r": "ix_media_ip",
+       "k": "freq",
+       "m": {
+        "担当者任せ": 0.25,
+        "なし": 0.75
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_media_ip",
+     "name": "権利侵害・名誉毀損の賠償",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       3,
+       30,
+       150
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "記事や広告で他人の著作権・肖像権を侵害し、賠償や差し止めを求められる。",
+     "measures": [
+      "掲載前の権利確認",
+      "専門家賠償の検討"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "士業・コンサルティング",
+   "group": "サービス",
+   "aliases": [],
+   "note": "業務上の過誤による顧客への賠償と、顧客情報の漏えいが重点です。",
+   "focus": [
+    "ix_pro_err",
+    "cyber_leak"
+   ],
+   "terms": {
+    "工場": "事務所",
+    "工程・ライン": "業務"
+   },
+   "questions": [],
+   "risks": [
+    {
+     "id": "ix_pro_err",
+     "name": "業務上の過誤による賠償",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.5,
+       3,
+       10
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "助言や書類作成の誤りで顧客に損害を与え、賠償を求められる。",
+     "measures": [
+      "ダブルチェックの手順",
+      "契約での責任範囲の明記",
+      "専門職業賠償の確認"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "スポーツ・娯楽施設",
+   "group": "サービス",
+   "aliases": [],
+   "note": "利用者の事故と、施設の老朽化による事故、大規模な休業が重点です。",
+   "focus": [
+    "ix_sport_user",
+    "premises",
+    "bi"
+   ],
+   "terms": {
+    "工場": "施設",
+    "工程・ライン": "施設運営"
+   },
+   "questions": [],
+   "risks": [
+    {
+     "id": "ix_sport_user",
+     "name": "施設利用者の事故",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       3,
+       30,
+       200
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "設備の不具合や監視の不足で利用者がけがをし、賠償を求められる。",
+     "measures": [
+      "設備の点検記録",
+      "監視員の配置と訓練"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "理美容・エステ",
+   "group": "サービス",
+   "aliases": [],
+   "note": "施術による身体の事故と、来店客の事故が重点です。",
+   "focus": [
+    "ix_beauty",
+    "premises"
+   ],
+   "terms": {
+    "工場": "店舗",
+    "工程・ライン": "施術"
+   },
+   "questions": [],
+   "risks": [
+    {
+     "id": "ix_beauty",
+     "name": "施術による事故",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       1,
+       10,
+       50
+      ]
+     },
+     "baseFreq": 4,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "薬剤や施術で皮膚の障害などが起き、賠償を求められる。",
+     "measures": [
+      "パッチテストと記録",
+      "施術前の説明と同意"
+     ]
+    }
+   ],
+   "products": false
+  },
+  {
+   "id": "自動車販売・整備",
+   "group": "サービス",
+   "aliases": [],
+   "note": "預かり車両の損害と、整備ミスによる事故の賠償が重点です。",
+   "focus": [
+    "ix_car_custody",
+    "premises",
+    "fire",
+    "flood"
+   ],
+   "terms": {
+    "工場": "店舗・工場",
+    "工程・ライン": "整備・販売"
+   },
+   "questions": [
+    {
+     "id": "ix_car_n",
+     "layer": "company",
+     "label": "常時の預かり・展示車両の台数",
+     "type": "num",
+     "unit": "台",
+     "ex": 80,
+     "risks": [
+      "ix_car_custody"
+     ],
+     "fx": [
+      {
+       "r": "ix_car_custody",
+       "k": "sev",
+       "ge": [
+        [
+         50,
+         1.3
+        ],
+        [
+         200,
+         1.8
+        ]
+       ]
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_car_custody",
+     "name": "預かり・展示車両の損害",
+     "domain": "prop",
+     "scope": "company",
+     "formula": {
+      "type": "fixed",
+      "amounts": [
+       3,
+       30,
+       200
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "premises"
+     ],
+     "scenario": "冠水や火災、試乗中の事故で預かり車両や展示車両が損害を受ける。",
+     "measures": [
+      "水害時の車両退避の手順",
+      "受託者賠償・在庫車両の補償の確認"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "農業・畜産",
+   "group": "一次産業・エネルギー・環境",
+   "aliases": [],
+   "note": "天候不順・家畜の疫病による減収と、施設の風災・雪害が重点です。",
+   "focus": [
+    "wind",
+    "ix_agri",
+    "bi"
+   ],
+   "terms": {
+    "工場": "農場・施設",
+    "工程・ライン": "生産"
+   },
+   "questions": [],
+   "risks": [
+    {
+     "id": "ix_agri",
+     "name": "天候不順・疫病による減収",
+     "domain": "bi",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       2,
+       10,
+       40
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [],
+     "scenario": "天候不順や家畜の疫病で、収穫や出荷が大きく減る。",
+     "measures": [
+      "収入保険・共済の確認",
+      "防疫の徹底"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "水産・水産加工",
+   "group": "一次産業・エネルギー・環境",
+   "aliases": [],
+   "note": "冷凍冷蔵設備の停止による在庫の損害と、食中毒・異物混入が重点です。",
+   "focus": [
+    "foodpoison",
+    "recall",
+    "lightning"
+   ],
+   "terms": {
+    "工程・ライン": "加工ライン"
+   },
+   "questions": [
+    {
+     "id": "ix_food_cold",
+     "layer": "company",
+     "label": "冷凍・冷蔵設備の停電対策",
+     "type": "select",
+     "opts": [
+      "非常用電源あり",
+      "なし"
+     ],
+     "ex": "なし",
+     "risks": [
+      "bi"
+     ],
+     "fx": [
+      {
+       "r": "bi",
+       "k": "sev",
+       "m": {
+        "なし": 1.1
+       }
+      }
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "id": "ix_food_contam",
+     "name": "異物混入・食中毒",
+     "domain": "liab",
+     "scope": "company",
+     "formula": {
+      "type": "revenueRate",
+      "rates": [
+       0.5,
+       3,
+       10
+      ]
+     },
+     "baseFreq": 3,
+     "insurance": [
+      "liability",
+      "recall"
+     ],
+     "scenario": "異物混入や食中毒が発生し、回収・賠償・販売停止が重なる。",
+     "measures": [
+      "金属検出・X線検査の全数化",
+      "回収手順の訓練",
+      "アレルゲン表示の二重確認"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "エネルギー（太陽光・発電）",
+   "group": "一次産業・エネルギー・環境",
+   "aliases": [],
+   "note": "落雷・風災・雹・水害による発電設備の損害と、売電収入の停止が重点です。",
+   "focus": [
+    "lightning",
+    "wind",
+    "flood",
+    "bi"
+   ],
+   "terms": {
+    "工場": "発電所",
+    "工程・ライン": "発電設備"
+   },
+   "questions": [
+    {
+     "id": "ix_pv_mon",
+     "layer": "company",
+     "label": "発電の遠隔監視",
+     "type": "select",
+     "opts": [
+      "あり",
+      "なし"
+     ],
+     "ex": "あり",
+     "risks": [
+      "lightning"
+     ],
+     "fx": [
+      {
+       "r": "lightning",
+       "k": "sev",
+       "m": {
+        "なし": 1.2
+       }
+      }
+     ]
+    }
+   ],
+   "risks": []
+  },
+  {
+   "id": "廃棄物処理・リサイクル",
+   "group": "一次産業・エネルギー・環境",
+   "aliases": [],
+   "note": "リチウム電池などによる火災が多く、火災と近隣への賠償、労働災害が重点です。",
+   "focus": [
+    "fire",
+    "premises",
+    "wc"
+   ],
+   "terms": {
+    "工場": "処理施設"
+   },
+   "questions": [
+    {
+     "id": "ix_wst_bat",
+     "layer": "company",
+     "label": "リチウムイオン電池の混入対策",
+     "type": "select",
+     "opts": [
+      "分別・検知あり",
+      "分別のみ",
+      "なし"
+     ],
+     "ex": "分別のみ",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "分別のみ": 0.5,
+        "なし": 1
+       }
+      }
+     ]
+    },
+    {
+     "id": "ix_mfg_dust",
+     "layer": "company",
+     "label": "粉じん・油煙の清掃",
+     "type": "select",
+     "opts": [
+      "定期",
+      "不定期"
+     ],
+     "ex": "定期",
+     "risks": [
+      "fire"
+     ],
+     "fx": [
+      {
+       "r": "fire",
+       "k": "freq",
+       "m": {
+        "不定期": 0.25
+       }
+      }
+     ]
+    }
+   ],
+   "risks": []
+  },
+  {
+   "id": "その他",
+   "group": "一次産業・エネルギー・環境",
+   "aliases": [],
+   "note": "一般的な項目で評価します。業種に特有のリスクは「拠点に特有の危険」や事故想定で補ってください。",
+   "focus": [
+    "fire",
+    "cyber_stop",
+    "premises"
+   ],
+   "terms": {},
+   "questions": [],
+   "risks": []
+  }
+ ]
 }

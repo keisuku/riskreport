@@ -190,6 +190,54 @@
     return { svg: s, legend };
   };
 
+
+  /* ---------- 補償の積み上げ図：免責・個別保険・自己負担の帯・包括保険・上限超過 ---------- */
+  C.SEG = [['ded', '個別保険の免責（自己負担）', 'var(--s-ded)'], ['prim', '個別保険', 'var(--s-prim)'], ['gap', '包括の免責までの自己負担（帯）', 'var(--s-gap)'], ['umb', '包括保険（アンブレラ）', 'var(--s-umb)'], ['over', '保険の手当てなし・限度額超過', 'var(--s-over)']];
+  C.tower = function (o) {
+    const R = RR.compute(); const L = o.level === undefined ? R.level : o.level; const W = o.w || 960; const narrow = W < 600;
+    let items = (o.items || R.headline).filter((i) => i.loss[L] > 0).sort((a, b) => b.loss[L] - a.loss[L]);
+    const maxN = o.max || 24; const rest = Math.max(0, items.length - maxN); items = items.slice(0, maxN);
+    const rh = narrow ? 52 : 42, top = 22; const max = Math.max(1, ...items.map((i) => i.loss[L])); const bw = W - 4; const X = (v) => (v / max) * bw;
+    const H = top + items.length * rh + 6;
+    let s = `<svg class="viz tower" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="補償の積み上げ図">`;
+    s += `<text class="t-axis" x="0" y="12">0</text><text class="t-axis" x="${W - 4}" y="12" text-anchor="end">${E(RR.money(max))}</text><line class="rule" x1="0" y1="${top - 4}" x2="${W - 4}" y2="${top - 4}"/>`;
+    items.forEach((it, i) => {
+      const y = top + i * rh; const g = it.ins[L].seg; const by = y + (narrow ? 32 : 21), bh = 11; let x = 0;
+      const ret = g.ded + g.gap + g.over; const ins = g.prim + g.umb;
+      s += `<g class="ib" data-key="${E(it.key)}" tabindex="0" role="button"><rect class="lb-hit" x="0" y="${y}" width="${W}" height="${rh}"/>`;
+      s += `<text class="t-name" x="0" y="${y + 13}" font-size="12"><tspan class="t-dom" fill="var(--d-${it.domain})">■</tspan> ${E(fit(it.label.replace('｜', '・'), 12, narrow ? W - 10 : W - 330))}</text>`;
+      const nums = `損害 <tspan class="b">${E(RR.money(it.loss[L]))}</tspan>　保険 <tspan class="b">${E(RR.money(ins))}</tspan>　自己負担 <tspan class="b hot">${E(RR.money(ret))}</tspan>`;
+      s += narrow ? `<text class="t-num sm" x="0" y="${y + 27}">${nums}</text>` : `<text class="t-num sm" x="${W - 4}" y="${y + 13}" text-anchor="end">${nums}</text>`;
+      for (const [k, , col] of C.SEG) { const v = g[k]; if (!(v > 0)) continue; const w = X(v); s += `<rect x="${x.toFixed(1)}" y="${by}" width="${Math.max(1.5, w - (w > 3 ? 1.5 : 0)).toFixed(1)}" height="${bh}" fill="${col}" class="seg-${k}"><title>${E(C.SEG.find((z) => z[0] === k)[1] + '：' + RR.money(v))}</title></rect>`; x += w; }
+      s += `</g>`;
+    });
+    s += `</svg>`;
+    const legend = `<div class="viz-legend">${C.SEG.map(([k, l, c]) => `<span><i class="sq" style="background:${c}"></i>${E(l)}</span>`).join('')}<span class="lg-note">${E(RR.levelNames[L])}での内訳。保険の見込みは支払限度額と免責金額だけを当てはめた試算で、補償を約束するものではありません。${rest ? `ほか${rest}件は登録簿に記載。` : ''}</span></div>`;
+    return { svg: s, legend };
+  };
+
+  /* ---------- 免責の比較図：保険料 ＋ 自己負担の見込み ---------- */
+  C.dedsim = function (o) {
+    const sims = o.sims || RR.dedSim(); const W = o.w || 960; const narrow = W < 600; if (!sims.length) return { svg: '', legend: '', empty: true };
+    const rows = []; sims.forEach((d) => { rows.push({ head: d }); d.rows.forEach((r) => rows.push({ d, r })); });
+    const rh = 30, hh = 30, nameW = narrow ? 120 : 200, numW = narrow ? 0 : 280; let H = 8; rows.forEach((x) => (H += x.head ? hh : rh)); if (narrow) H += rows.filter((x) => x.r).length * 14;
+    const max = Math.max(1, ...sims.flatMap((d) => d.rows.map((r) => (r.total === null ? r.ret.total : r.total)))); const bw = W - nameW - numW - 10; const X = (v) => (v / max) * bw;
+    let s = `<svg class="viz dedsim" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="免責の比較図">`; let y = 4;
+    for (const x of rows) {
+      if (x.head) { const d = x.head; s += `<text class="t-name" x="0" y="${y + 20}" font-size="12.5">${E(d.pol.id + '　' + d.type)}${d.umb ? '' : ''}</text><text class="t-axis" x="${W - 4}" y="${y + 20}" text-anchor="end">支払限度額 ${E(RR.money(d.limit))}${d.smallN ? `　小口の事故 年${d.smallN}件・平均${E(RR.money(d.smallAvg))}` : ''}</text><line class="rule" x1="0" y1="${y + 27}" x2="${W}" y2="${y + 27}"/>`; y += hh; continue; }
+      const r = x.r, d = x.d; const base = d.rows[0]; const prem = r.prem === null ? 0 : r.prem; const ret = r.ret.total;
+      s += `<text class="t-row" x="0" y="${y + 19}" font-size="11.5">${E(r.label)}　免責 ${E(RR.money(r.ded))}${r.est ? '（目安）' : ''}</text>`;
+      s += `<rect x="${nameW}" y="${y + 9}" width="${Math.max(1, X(prem)).toFixed(1)}" height="12" fill="var(--s-prim)"><title>保険料 ${E(RR.money(prem))}</title></rect><rect x="${(nameW + X(prem)).toFixed(1)}" y="${y + 9}" width="${Math.max(ret > 0 ? 1.5 : 0, X(ret)).toFixed(1)}" height="12" fill="var(--s-gap)"><title>自己負担の見込み ${E(RR.money(ret))}</title></rect>`;
+      if (base.total !== null && r !== base) s += `<line class="limit" x1="${(nameW + X(base.total)).toFixed(1)}" y1="${y + 5}" x2="${(nameW + X(base.total)).toFixed(1)}" y2="${y + 25}"/>`;
+      const txt = `年あたり <tspan class="b">${r.total === null ? '保険料不明' : E(RR.money(r.total))}</tspan>${r !== base && r.netGain !== null ? `（${r.netGain >= 0 ? '−' : '＋'}${E(RR.money(Math.abs(r.netGain)))}）` : ''}${r.ok ? '' : '　<tspan class="hot">1回の自己負担が許容額を超える</tspan>'}${d.best === r ? '　<tspan class="b">◎</tspan>' : ''}`;
+      s += narrow ? `<text class="t-num sm" x="${nameW}" y="${y + 36}">${txt}</text>` : `<text class="t-num sm" x="${W - 4}" y="${y + 19}" text-anchor="end">${txt}</text>`;
+      y += rh + (narrow ? 14 : 0);
+    }
+    s += '</svg>';
+    const legend = `<div class="viz-legend"><span><i class="sq" style="background:var(--s-prim)"></i>年間保険料</span><span><i class="sq" style="background:var(--s-gap)"></i>自己負担の見込み（年あたり）</span><span><i class="tick"></i>現状の合計</span><span class="lg-note">（−）は現状より有利、（＋）は不利。◎は、1回の自己負担が自己負担できる額に収まる案のうち最も有利なもの。見積のない案（目安）は係数表の割引率による仮置きの試算です。</span></div>`;
+    return { svg: s, legend };
+  };
+
   /* ---------- 拠点の略図（外部の地図サービスを使わない） ---------- */
   const JP = {
     hokkaido: [[141.7, 45.5], [142.9, 44.6], [144.3, 44.1], [145.3, 44.3], [145.8, 43.4], [144.4, 42.9], [143.3, 42.0], [141.9, 42.6], [141.0, 42.3], [140.9, 41.8], [140.2, 41.4], [139.8, 42.2], [140.4, 43.2], [141.3, 43.2], [141.6, 44.0], [141.7, 45.0]],

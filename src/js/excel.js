@@ -213,7 +213,7 @@
     for (const q of RR.qs) {
       if (RR.layers[q.layer].appOnly || !inScope(q.layer)) continue;
       if (RR.layers[q.layer].kind === 'items') check(q, (c.items[q.id] || {}).v, q.layer, '項目');
-      else for (const r of c.rows[q.layer] || []) check(q, r.f[q.id], q.layer, `${r.id}${r.f[RR.layers[q.layer].nameField] && RR.layers[q.layer].nameField !== q.id ? '（' + r.f[RR.layers[q.layer].nameField] + '）' : ''}`);
+      else for (const r of c.rows[q.layer] || []) if (!(q.layer === 'policy' && r.f.pol_status && r.f.pol_status !== '加入' && q.id !== 'pol_type' && q.id !== 'pol_status')) check(q, r.f[q.id], q.layer, `${r.id}${r.f[RR.layers[q.layer].nameField] && RR.layers[q.layer].nameField !== q.id ? '（' + r.f[RR.layers[q.layer].nameField] + '）' : ''}`);
     }
     const sites = c.rows.site || []; const ids = new Set(sites.map((s) => s.id));
     if (!sites.length) add('error', '未記入', 'site', '—', null, '拠点が1件も記入されていません。拠点別の評価は行えません。');

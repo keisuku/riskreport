@@ -3,13 +3,15 @@
   const E = RR.esc, M = (x) => RR.money(x), $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const st = (RR.ui = { view: 'home', mapState: 'B', prevState: 'A', domain: '', site: '', all: false, peril: 'max', edition: 'full', layer: 'site', promptKey: 'c1', pending: null, reportKey: '', built: false });
   const lab = (it) => E(it.label.replace('｜', '・'));
-  const VIEWS = [['home', '診断'], ['quick', '簡易入力'], ['data', 'データ'], ['proposals', '提案台帳'], ['report', 'レポート'], ['ai', 'AIプロンプト'], ['settings', '設定']];
+  const VIEWS = [['home', '診断'], ['quick', '簡易入力'], ['data', 'データ'], ['scenario', '事故想定'], ['insurance', '保険と免責'], ['posts', '写真・資料'], ['proposals', '提案台帳'], ['report', 'レポート'], ['ai', 'AIプロンプト'], ['settings', '設定']];
   const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
   const moneyBig = (v) => RR.moneyParts(v).map((x, i) => (i ? `<small>${E(x)}</small>` : E(x))).join('');
 
   /* ---------- 入力部品（質問マスタから作る） ---------- */
   function input(q, v, attrs) {
     const a = attrs + ` data-q="${q.id}" aria-label="${E(q.label)}"`; const val = v === undefined || v === null ? '' : v; const opts = RR.optsOf(q);
+    if (q.type === 'place') { const ps = RR.places(); return `<select ${a}><option value=""></option>${ps.map((p) => `<option value="${E(p.v)}"${p.v === val ? ' selected' : ''}>${E(p.l)}</option>`).join('')}</select>`; }
+    if (q.opts === '@industries') { const I = RR.raw.industries; return `<select ${a}><option value=""></option>${(I.groups || []).map((g) => `<optgroup label="${E(g)}">${I.packs.filter((p) => p.group === g).map((p) => `<option${p.id === val || (p.aliases || []).includes(val) ? ' selected' : ''}>${E(p.id)}</option>`).join('')}</optgroup>`).join('')}</select>`; }
     if (opts) return `<select ${a}><option value=""></option>${opts.map((o) => `<option${o === val ? ' selected' : ''}>${E(o)}</option>`).join('')}${val !== '' && !opts.includes(val) ? `<option selected>${E(val)}</option>` : ''}</select>`;
     if (q.type === 'ref') return `<select ${a}><option value=""></option>${RR.rows('site').map((s) => `<option value="${E(s.id)}"${s.id === val ? ' selected' : ''}>${E(s.id + ' ' + (s.f.site_name || ''))}</option>`).join('')}</select>`;
     if (q.type === 'long') return `<textarea ${a} rows="2">${E(val)}</textarea>`;
@@ -29,7 +31,7 @@
     $$('.view').forEach((s) => s.classList.toggle('on', s.id === 'v-' + st.view)); $$('#nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === st.view));
     document.body.dataset.view = st.view; render(); window.scrollTo(0, 0);
   }
-  function render() { const fn = { home: renderHome, quick: renderQuick, data: renderData, proposals: renderProposals, report: renderReport, ai: renderAI, settings: renderSettings }[st.view]; $('#casename').textContent = RR.companyName(false) + (RR.case.meta.isSample ? '（サンプル・架空）' : ''); fn(); }
+  function render() { const fn = { home: renderHome, quick: renderQuick, data: renderData, scenario: renderScenario, insurance: renderInsurance, posts: renderPosts, proposals: renderProposals, report: renderReport, ai: renderAI, settings: renderSettings }[st.view]; $('#casename').textContent = RR.companyName(false) + (RR.case.meta.isSample ? '（サンプル・架空）' : ''); fn(); }
   function mapItems() { const R = RR.compute(); let its = st.site ? R.items.filter((i) => i.siteId === st.site || (i.members || []).includes(st.site)) : st.all ? R.items : R.headline; if (st.domain) its = its.filter((i) => i.domain === st.domain); return its; }
   const seg = (name, opts, cur) => `<div class="seg" role="group" aria-label="${E(name)}">${opts.map(([v, l]) => `<button type="button" data-seg="${name}" data-val="${E(v)}" class="${String(v) === String(cur) ? 'on' : ''}">${E(l)}</button>`).join('')}</div>`;
 
@@ -58,9 +60,11 @@
   <label>損害の水準 <select id="f-level">${RR.levelShort.map((n, i) => `<option value="${i}"${i === L ? ' selected' : ''}>${E(n)}</option>`).join('')}</select></label>
   <label class="chk"><input type="checkbox" id="f-all"${st.all ? ' checked' : ''}${st.site ? ' disabled' : ''}> 拠点別のリスクをすべて載せる</label>
 </div>
+<section class="figsec"><div class="fighead"><div><h2>リスク把握・包括保険・個別保険</h2><p>どのリスクが、どの保険で、どこまで手当てされているか。</p></div><a class="btn sm" href="#insurance">保険と免責を開く</a></div>${RR.report.B.three_overview(null, { quick: false }).join('')}</section>
+<section class="figsec">${RR.report.B.spotlight_cyber(null, {}).join('')}<div class="row"><a class="btn sm" href="#scenario" data-jump="scn-cyber">サイバー攻撃の事故想定を見る</a></div></section>
 <section class="figsec"><div class="fighead"><div><h2>図2　備えと損害のマップ</h2><p>損害が大きいのに、代替手段がないのはどこか。</p></div></div><div id="fig2" class="figbox"></div></section>
 <section class="figsec"><div class="fighead"><div><h2>図3　拠点 × 災害の一覧図</h2><p>どの拠点が、どの災害に弱いか。</p></div></div><div id="fig3" class="figbox"></div></section>
-<section class="figsec"><div class="fighead"><div><h2>図4　損害と保険の対比図</h2><p>保険で賄えない額は、どこに、いくらあるか。</p></div></div><div id="fig4" class="figbox"></div></section>
+<section class="figsec"><div class="fighead"><div><h2>図4　損害と保険の対比図（補償の積み上げ）</h2><p>免責・個別保険・自己負担の帯・包括保険・手当てなしの内訳。</p></div></div><div id="fig4" class="figbox"></div></section>
 <section class="figsec"><div class="fighead"><div><h2>拠点の略図</h2><p>災害の種類ごとに、拠点の損害の大きさを色で示します。</p></div>${seg('peril', [['max', '最大の災害']].concat(RR.perils.map((p) => [p.id, p.label])), st.peril)}</div><div id="fig5" class="figbox"></div></section>
 <section class="figsec"><div class="fighead"><div><h2>リスク登録簿</h2><p>${R.items.length}件。行を押すと算出根拠が開きます。</p></div></div><div class="tablewrap" id="register"></div></section>`;
     drawFigs(st.built ? false : 'build'); st.built = true;
@@ -70,7 +74,7 @@
     RR.charts.mount($('#fig1'), 'riskMap', { state: st.mapState, from, items }, anim);
     RR.charts.mount($('#fig2'), 'prepMap', { items }, anim === 'build' ? 'build' : false);
     RR.charts.mount($('#fig3'), 'heatmap', { site: st.site }, anim === 'build' ? 'build' : false);
-    RR.charts.mount($('#fig4'), 'insBars', { items }, anim === 'build' ? 'build' : false);
+    RR.charts.mount($('#fig4'), 'tower', { items }, false);
     RR.charts.mount($('#fig5'), 'siteMap', { peril: st.peril }, false);
     const R = RR.compute(), L = R.level; const its = st.site || st.domain ? items : R.items;
     $('#register').innerHTML = `<table class="grid reg"><thead><tr><th class="num">順位</th><th>リスク</th><th>領域</th>${RR.levelShort.map((n) => `<th class="num">${E(n)}</th>`).join('')}<th class="num">賄えない額</th><th class="num">提案後</th><th class="ctr">等級</th><th class="ctr">頻度</th><th class="ctr">代替</th><th>未確認</th></tr></thead><tbody>${its.map((i) => `<tr data-key="${E(i.key)}" tabindex="0"><td class="num">${i.rank}</td><td>${i.gap ? '<span class="gapmark" title="備えの空白">▲</span>' : ''}${lab(i)}</td><td><i class="dom" style="background:var(--d-${i.domain})"></i>${E(RR.domainById[i.domain].label)}</td>${i.loss.map((x) => `<td class="num">${M(x)}</td>`).join('')}<td class="num b">${M(i.uninsured[L])}</td><td class="num">${i.hasPlan ? M(i.uninsuredC[L]) : '—'}</td><td class="ctr"><span class="gr" style="background:var(--m${i.grade(L)})${i.grade(L) >= 4 ? ';color:#fff' : ''}">${i.grade(L)}</span></td><td class="ctr">${i.freqGrade}</td><td class="ctr">${i.prep.alt || '<span class="unc">未回答</span>'}</td><td>${i.unconfirmed.length ? `<span class="unc">未確認 ${i.unconfirmed.length}</span>` : ''}</td></tr>`).join('')}</tbody></table>`;
@@ -89,52 +93,152 @@
 ${it.unconfirmed.length ? `<p class="uncbox"><span class="unc">未確認</span> この金額には、未確認・未記入の入力が${it.unconfirmed.length}項目含まれます：${it.unconfirmed.map(E).join('、')}</p>` : ''}
 <h3>備えの状況</h3><table class="kv">${row('予防', pl(it.prep.prevent))}${row('代替手段', pl(it.prep.alt))}${row('復旧手順', pl(it.prep.recover))}${row('保険', pl(it.prep.insure))}${it.prep.memo ? row('内容', E(it.prep.memo)) : ''}</table>${it.gap ? '<p class="gapnote">▲ 備えの空白：損害が自己負担できる額を超え、代替手段が整っていません。</p>' : ''}
 <h3>紐づく証券</h3>${it.ins[L].lines.length ? `<ul class="basis-l">${it.ins[L].lines.map((b) => `<li>${E(b)}</li>`).join('')}</ul>` : '<p>紐づく証券はありません。</p>'}<p class="fine">賄えない額 ＝ 損害額 − 支払限度額 ＋ 免責金額。補償の可否は約款と保険会社の判断によります。</p>
-<h3>改善提案</h3>${it.proposals.length ? `<ul class="prl">${it.proposals.map((p) => `<li><b>${E(p.f.pr_priority || '')}</b> ${E(p.f.pr_title)}<span>${E(p.f.pr_status || '')}・${E(p.f.pr_cost || '')}・${E(p.f.pr_due || '')}</span></li>`).join('')}</ul>` : `<p>登録された提案はありません。</p>${it.measures.length ? `<p class="fine">対策の例（リスク辞書）：${it.measures.map(E).join('、')}</p>` : ''}`}`;
+<h3>補償の内訳（${E(RR.levelShort[L])}）</h3><table class="kv">${RR.charts.SEG.map(([k, l, c]) => `<tr><th><i class="sq" style="display:inline-block;width:.8em;height:.8em;background:${c};margin-right:.4em"></i>${E(l)}</th><td class="num">${M(it.ins[L].seg[k])}</td></tr>`).join('')}</table>
+<h3>この会社での想定に調整する</h3><p class="fine">何年に1度、現実的な損害、最大の損害を入れると、試算の代わりにその値を使います（百万円）。${it.siteId ? 'この拠点だけに当てはまります。' : ''}</p>
+<div class="adj"><label>何年に1度 <input type="number" step="any" class="numf" data-adj="${E(it.name)}|${E(it.siteId || '')}|as_period" value="${it.assume && it.assume.T !== null ? it.assume.T : ''}" placeholder="${RR.n1(it.T)}"></label><label>現実的な損害 <input type="number" step="any" class="numf" data-adj="${E(it.name)}|${E(it.siteId || '')}|as_real" value="${it.assume && it.assume.real !== null ? it.assume.real : ''}" placeholder="${RR.n1(it.calcLoss[0])}"></label><label>最大の損害 <input type="number" step="any" class="numf" data-adj="${E(it.name)}|${E(it.siteId || '')}|as_max" value="${it.assume && it.assume.max !== null ? it.assume.max : ''}" placeholder="${RR.n1(it.calcLoss[2])}"></label></div>
+<h3>改善提案</h3>${it.proposals.length ? `<ul class="prl">${it.proposals.map((p) => `<li><b>${E(p.f.pr_priority || '')}</b> ${E(p.f.pr_title)}<span>${E(p.f.pr_status || '')}・${E(p.f.pr_cost || '')}・${E(p.f.pr_due || '')}</span></li>`).join('')}</ul>` : `<p>登録された提案はありません。</p>${it.measures.length ? `<p class="fine">対策の例（リスク辞書）：${it.measures.map(E).join('、')}</p>` : ''}`}
+<div class="row">${it.siteId ? `<button type="button" class="btn sm" data-act="post-new" data-place="site:${E(it.siteId)}">＋ この拠点の写真・資料を追加</button>` : ''}${(() => { const sc = RR.scenarios.find((x) => x.risks.includes(it.id)); return sc ? `<a class="btn sm" href="#scenario" data-jump="scn-${sc.id}">事故想定（${E(sc.name)}）を見る</a>` : ''; })()}</div>`;
     d.classList.add('on'); $('#scrim').classList.add('on'); d.focus();
   }
   const closeDrawer = () => { $('#drawer').classList.remove('on'); $('#scrim').classList.remove('on'); };
 
-  /* ---------- 簡易入力 ---------- */
-  const QGROUP = { company: '会社', site: 'モノ（最大の拠点）', building: 'モノ（最大の拠点）', hazard: 'モノ（最大の拠点）', line: '事業の停止', system: 'サイバー', cyber: 'サイバー', liability: '賠償', people: 'ヒト', finance: '財務・経営', overseasq: '海外' };
-  function firstRec(layer, create) {
-    const L = RR.layers[layer]; const prov = { row: { src: '簡易入力', date: RR.today(), method: '聞き取り' } };
-    if (layer === 'site') { let s = RR.rows('site')[0]; if (!s && create) s = RR.addRow('site', { site_name: '主要拠点', site_use: '工場' }, prov); return s; }
-    if (L.siteField) { const s = firstRec('site', create); if (!s) return null; let r = RR.rows(layer).find((x) => x.f[L.siteField] === s.id); if (!r && create) r = RR.addRow(layer, { [L.siteField]: s.id, [L.nameField || '_']: layer === 'building' ? '主要建物' : layer === 'line' ? '主要工程' : undefined }, prov); return r; }
-    let r = RR.rows(layer)[0]; if (!r && create) r = RR.addRow(layer, { [L.nameField]: layer === 'system' ? '基幹システム' : '' }, prov); return r;
+  /* ---------- 簡易入力（主要拠点3〜5件、保険の加入状況、事故の想定まで） ---------- */
+  const QSEC = [
+    ['会社', ['co_name', 'co_industry', 'co_revenue', 'co_netassets', 'co_retention', 'co_margin', 'co_employees', 'co_group_program']],
+    ['BCP（事業継続計画）', ['bcp_status', 'bcp_scope', 'bcp_rto', 'bcp_review', 'bcp_safety', 'bcp_altsite', 'bcp_cash']],
+    ['サイバー（すべての業種で重点）', ['@system:sys_rev_share', '@system:sys_rto', '@system:sys_backup', 'cy_mfa', 'cy_edr', 'cy_training', 'cy_ir', 'cy_remote', 'cy_pii']],
+    ['賠償責任（施設・PL・リコール・食中毒・自転車・マイカー）', ['lb_visitors', 'lb_region', 'lb_recallplan', 'lb_trace', 'lb_food', 'lb_bike', 'lb_bike_n', 'lb_mycar', 'lb_mycar_n', 'lb_mycar_ins']],
+    ['ヒトと労務（使用者賠償・雇用慣行）', ['hr_danger', 'hr_accidents', 'hr_mental', 'hr_harass', 'hr_dispute', 'hr_vehicles']],
+    ['財務と与信（国内・海外）', ['fn_bd_real_dom', 'fn_bd_max_dom', 'fn_bd_real_ovs', 'fn_bd_max_ovs', 'fn_export_terms', 'fn_credit_ins', 'fn_credit', 'fn_control']],
+    ['海外（拠点・出張）', ['ov_has', 'ov_export', 'ov_trips', 'ov_expat', 'ov_travel_ins']],
+  ];
+  const SITE_F = [['site', ['site_name', 'site_addr', 'site_use', 'site_val_bld', 'site_val_eq', 'site_val_stock', 'site_rev_share']], ['building', ['bld_structure', 'bld_sprinkler', 'bld_lsens', 'bld_aging']], ['hazard', ['hz_river', 'hz_depth_max', 'hz_shindo', 'hz_wind']], ['line', ['line_name', 'line_revenue', 'line_recovery', 'line_alt_ratio', 'line_rebuy']]];
+  const QPROV = () => ({ row: { src: '簡易入力', date: RR.today(), method: '聞き取り' } });
+  function recFor(layer, siteId, create) {
+    const L = RR.layers[layer];
+    if (layer === 'site') return RR.rows('site').find((s) => s.id === siteId) || null;
+    if (L.siteField && siteId) { let r = RR.rows(layer).find((x) => x.f[L.siteField] === siteId); if (!r && create) { const f = { [L.siteField]: siteId }; if (layer === 'building') f.bld_name = '主要建物'; if (layer === 'line') f.line_name = '主要工程'; r = RR.addRow(layer, f, QPROV()); } return r || null; }
+    let r = RR.rows(layer)[0]; if (!r && create) r = RR.addRow(layer, layer === 'system' ? { sys_name: '基幹システム' } : {}, QPROV()); return r || null;
   }
+  const qf = (q, v, key, wide) => `<div class="qf${wide ? ' wide' : ''}"><label>${E(RR.t(q.label))}${RR.unitOf(q) ? `<span class="u">${E(RR.unitOf(q))}</span>` : ''}</label>${input(q, v, `data-qk="${E(key)}"`)}${q.help && !wide ? `<p class="help">${E(q.help)}</p>` : ''}</div>`;
   function renderQuick() {
-    const host = $('#v-quick'); const qs = RR.qs.filter((q) => q.quick && q.layer !== 'prep').sort((a, b) => a.quick - b.quick); const groups = {};
-    qs.forEach((q) => (groups[QGROUP[q.layer] || 'その他'] = groups[QGROUP[q.layer] || 'その他'] || []).push(q));
-    const field = (q) => { const kind = RR.layers[q.layer].kind; const rec = kind === 'items' ? null : firstRec(q.layer, false); const v = kind === 'items' ? RR.val(q.id) : rec ? rec.f[q.id] : ''; return `<div class="qf"><label>${E(RR.t(q.label))}${RR.unitOf(q) ? `<span class="u">${E(RR.unitOf(q))}</span>` : ''}</label>${input(q, v, 'data-quick="1"')}${q.help ? `<p class="help">${E(q.help)}</p>` : ''}</div>`; };
+    const host = $('#v-quick'); const sites = RR.rows('site').slice(0, 5);
+    const secHtml = QSEC.map(([title, ids]) => `<fieldset><legend>${E(title)}</legend><div class="qgrid">${ids.map((id) => { if (id[0] === '@') { const [layer, qid] = id.slice(1).split(':'); const q = RR.qById[qid]; const r = recFor(layer, null, false); return q ? qf(q, r ? r.f[qid] : '', `${layer}||${qid}`) : ''; } const q = RR.qById[id]; return q ? qf(q, RR.val(id), `item||${id}`) : ''; }).join('')}${(RR.pack.questions || []).filter((q) => q.layer === 'company' && title === '会社').map((q) => qf(q, RR.val(q.id), `item||${q.id}`)).join('')}</div></fieldset>`);
+    const siteCard = (s, i) => `<div class="qsite"><div class="qsite-h"><b>拠点${i + 1}</b><span>${E(s.id)}</span><button type="button" class="btn sm ghost" data-act="q-del-site" data-id="${E(s.id)}">削除</button></div><div class="qgrid sm">${SITE_F.map(([layer, ids]) => { const r = recFor(layer, s.id, false); return ids.map((qid) => { const q = RR.qById[qid]; return q ? qf(q, r ? r.f[qid] : '', `${layer}|${s.id}|${qid}`, true) : ''; }).join(''); }).join('')}</div></div>`;
+    const ptypes = RR.policyTypes.filter((t) => t.id !== 'other');
+    const insRow = (t) => { const p = RR.rows('policy').find((x) => x.f.pol_type === t.label); const f = p ? p.f : {}; const d = p ? RR.rows('dedopt').find((o) => o.f.do_pol === p.id) : null; const sel = (v) => ['', '加入', '未加入', '検討中', '不明'].map((o) => `<option${o === (v || '') ? ' selected' : ''}>${o}</option>`).join(''); const nf = (k, v) => `<input type="number" step="any" class="numf" data-qins="${E(t.label)}|${k}" value="${v === undefined ? '' : E(v)}" aria-label="${E(t.label)}">`; return `<tr class="${t.umbrella ? 'umbrow' : ''}"><th>${E(t.label)}${t.umbrella ? '<br><span class="fine">グループ包括を含む</span>' : ''}</th><td><select data-qins="${E(t.label)}|pol_status" aria-label="${E(t.label)}の加入状況">${sel(p ? f.pol_status || '加入' : '')}</select></td><td>${nf('pol_limit', f.pol_limit)}</td><td>${nf('pol_ded', f.pol_ded)}</td><td>${nf('pol_premium', f.pol_premium)}</td><td>${t.umbrella ? `<select data-qins="${E(t.label)}|pol_scope" aria-label="対象範囲"><option></option>${RR.umbrellaScopes.map((x) => `<option${x.label === f.pol_scope ? ' selected' : ''}>${E(x.label)}</option>`).join('')}</select>` : ''}</td><td>${nf('dedopt', d ? d.f.do_ded : undefined)}</td></tr>`; };
+    const pmo = ['', 1, 3, 5, 10, 20, 30, 50, 100, 200, 500];
+    const scnRow = ({ sc, prim, as }) => { const f = as ? as.f : {}; const nf = (k) => `<input type="number" step="any" class="numf" data-qscn="${sc.id}|${k}" value="${f[k] === undefined ? '' : E(f[k])}" aria-label="${E(sc.name)}">`; return `<tr><th>${E(sc.name)}</th><td><select data-qscn="${sc.id}|as_period" aria-label="何年に1度">${pmo.map((v) => `<option value="${v}"${String(v) === String(f.as_period === undefined ? '' : f.as_period) ? ' selected' : ''}>${v === '' ? '' : v === 1 ? '毎年' : v + '年に1度'}</option>`).join('')}</select><span class="fine">${prim ? '試算：' + E(RR.periodText(prim.T)) : ''}</span></td><td>${nf('as_real')}<span class="fine">${prim ? '試算：' + M(prim.calcLoss ? prim.calcLoss[0] : prim.loss[0]) : ''}</span></td><td>${nf('as_max')}<span class="fine">${prim ? '試算：' + M(prim.calcLoss ? prim.calcLoss[2] : prim.loss[2]) : ''}</span></td><td><select data-qscn="${sc.id}|as_bodily" aria-label="身体・財物"><option></option>${['想定される', '想定されない', '不明'].map((o) => `<option${o === f.as_bodily ? ' selected' : ''}>${o}</option>`).join('')}</select></td></tr>`; };
     const domAlt = (d) => { const rs = RR.risks.filter((r) => r.domain === d.id).map((r) => RR.rows('prep').find((p) => p.f.prep_risk === r.name && !p.f.prep_site)).filter(Boolean).map((p) => RR.lvl(p.f.prep_alt)).filter(Boolean); const cur = rs.length ? Math.min(...rs) : ''; return `<div class="qf"><label><i class="dom" style="background:var(--d-${d.id})"></i>${E(d.label)}</label><select data-quickprep="${d.id}" aria-label="${E(d.label)}の代替手段"><option value=""></option>${RR.prepLevels.map((l, i) => `<option value="${i + 1}"${cur === i + 1 ? ' selected' : ''}>${E(l)}</option>`).join('')}</select></div>`; };
-    host.innerHTML = `<div class="pagehead"><div><h1>簡易入力</h1><p>約${qs.length + 7}項目。答えるたびに、右の想定損害額と純資産に対する比率が変わります。ここで入れたデータは、そのまま網羅版の土台になります。</p></div>${RR.case.meta.isSample ? '<div class="notice">いまはサンプル企業のデータが入っています。<button type="button" class="btn pri sm" data-act="blank">白紙にして自社の入力を始める</button></div>' : '<div class="notice">入力は端末の中にだけ保存されます。<button type="button" class="btn sm" data-act="sample">サンプルに戻す</button></div>'}</div>
-<div class="quick"><form class="qform" onsubmit="return false">${Object.keys(groups).map((g) => `<fieldset><legend>${E(g)}</legend><div class="qgrid">${groups[g].map(field).join('')}</div></fieldset>`).join('')}
-<fieldset><legend>備え：代替手段はどこまで用意していますか</legend><p class="help">止まったときの代わりの手段（予備設備、他拠点、外注、バックアップなど）を、領域ごとに選びます。</p><div class="qgrid">${RR.domains.map(domAlt).join('')}</div></fieldset></form>
-<aside class="qlive" id="qlive"></aside></div>`;
+    const nPosts = RR.rows('post').length;
+    host.innerHTML = `<div class="pagehead"><div><h1>簡易入力</h1><p>会社の概要、主要拠点（3〜5件）、BCP、サイバー、賠償、ヒト、与信、海外、保険の加入状況、事故の想定まで。答えるたびに右の想定損害額が変わります。ここで入れたデータは、そのまま網羅版の土台になります。</p></div>${RR.case.meta.isSample ? '<div class="notice">いまはサンプル企業のデータが入っています。<button type="button" class="btn pri sm" data-act="blank">白紙にして自社の入力を始める</button></div>' : '<div class="notice">入力は端末の中にだけ保存されます。<button type="button" class="btn sm" data-act="sample">サンプルに戻す</button></div>'}</div>
+<div class="quick"><form class="qform" onsubmit="return false">
+${secHtml[0]}
+<fieldset><legend>主要拠点（3〜5件）</legend><p class="help">売上や資産が大きい拠点から順に入れます。6件目以降は「データ」画面またはExcel様式で追加します。</p><div class="qsites">${sites.map(siteCard).join('')}</div>${sites.length < 5 ? '<div class="row"><button type="button" class="btn sm" data-act="q-add-site">拠点を追加</button></div>' : ''}${RR.rows('site').length > 5 ? `<p class="fine">ほか${RR.rows('site').length - 5}拠点は「データ」画面で編集できます。</p>` : ''}</fieldset>
+${secHtml.slice(1).join('')}
+<fieldset><legend>保険の加入状況（個別保険と包括保険）</legend><p class="help">種目ごとに、加入状況と支払限度額・免責金額を入れます（金額は百万円）。包括（アンブレラ）は、グループで契約している高額の補償を含みます。「検討する免責」に金額を入れると、免責を引き上げた場合の保険料と自己負担の比較が出ます。</p>
+<div class="tablewrap"><table class="grid qins"><thead><tr><th>種目</th><th>加入状況</th><th class="num">支払限度額</th><th class="num">免責金額</th><th class="num">年間保険料</th><th>包括の対象範囲</th><th class="num">検討する免責</th></tr></thead><tbody>${ptypes.map(insRow).join('')}</tbody></table></div></fieldset>
+<fieldset><legend>事故の想定（何年に1度、どのくらいの損害か）</legend><p class="help">空欄のときは、回答と係数による試算（灰色の小さな数字）を使います。担当者の感覚で「何年に1度」「現実的にはいくら」「最大でいくら」を入れると、その値で評価します。対応の手順は「事故想定」画面で確認できます。</p>
+<div class="tablewrap"><table class="grid qscn"><thead><tr><th>事故</th><th>何年に1度</th><th class="num">現実的な損害（百万円）</th><th class="num">最大の損害（百万円）</th><th>身体・財物に大きな損害</th></tr></thead><tbody>${RR.report.scenarioData().map(scnRow).join('')}</tbody></table></div></fieldset>
+<fieldset><legend>備え：代替手段はどこまで用意していますか</legend><p class="help">止まったときの代わりの手段（予備設備、他拠点、外注、バックアップなど）を、領域ごとに選びます。</p><div class="qgrid">${RR.domains.map(domAlt).join('')}</div></fieldset>
+<fieldset><legend>写真と資料</legend><p>現地の写真、ハザードマップの引用図、面談のメモなどを、タイトルとコメントつきでレポートのどこにでも差し込めます。いま${nPosts}件。</p><div class="row"><a class="btn" href="#posts">写真・資料を追加する</a></div></fieldset>
+</form><aside class="qlive" id="qlive"></aside></div>`;
     renderQuickLive(true);
   }
   function renderQuickLive(build) {
-    const R = RR.compute(), L = R.level; const el = $('#qlive'); if (!el) return; const top = R.items[0];
+    const R = RR.compute(), L = R.level; const el = $('#qlive'); if (!el) return; const top = R.items[0]; const T = RR.three(); const cs = RR.cyberScore();
     const byDom = RR.domains.map((d) => { const its = R.items.filter((i) => i.domain === d.id).sort((a, b) => b.loss[L] - a.loss[L]); return { d, it: its[0] }; }); const max = Math.max(1, ...byDom.map((x) => (x.it ? x.it.loss[L] : 0)));
     const ratio = top && R.net > 0 ? (top.loss[L] / R.net) * 100 : null;
+    const insSum = R.headline.reduce((a, i) => a + i.ins[L].seg.prim + i.ins[L].seg.umb, 0), retSum = R.headline.reduce((a, i) => a + i.ins[L].seg.ded + i.ins[L].seg.gap + i.ins[L].seg.over, 0);
     el.innerHTML = `<div class="ql-top"><div class="k-l">最大の想定損害（${E(RR.levelShort[L])}）</div><div class="ql-big num">${top ? moneyBig(top.loss[L]) : '—'}</div><div class="ql-sub">${top ? lab(top) : '売上高・純資産・拠点の資産額を入れると表示されます'}</div>
-<div class="ql-ratio"><div><span>純資産に対する比率</span><b class="num">${ratio === null ? '—' : RR.n0(ratio) + '%'}</b></div><div><span>うち保険で賄えない額</span><b class="num">${top ? M(top.uninsured[L]) : '—'}</b></div><div><span>備えの空白</span><b class="num">${R.gapsHead.length}種類</b></div></div></div>
+<div class="ql-ratio"><div><span>純資産に対する比率</span><b class="num">${ratio === null ? '—' : RR.n0(ratio) + '%'}</b></div><div><span>うち保険で賄えない額</span><b class="num">${top ? M(top.uninsured[L]) : '—'}</b></div><div><span>備えの空白</span><b class="num">${R.gapsHead.length}種類</b></div></div>
+<div class="ql-ratio"><div><span>保険で賄う見込み（主なリスク計）</span><b class="num">${M(insSum)}</b></div><div><span>自己負担（免責・帯・手当てなし）</span><b class="num">${M(retSum)}</b></div><div><span>サイバー対策</span><b class="num">${cs.done}/${cs.total}</b></div></div></div>
 <div class="ql-dom"><div class="k-l">7つの領域（各領域で最大のリスク）</div>${byDom.map((x) => `<div class="qd" ${x.it ? `data-key="${E(x.it.key)}" tabindex="0"` : ''}><div class="qd-n"><i class="dom" style="background:var(--d-${x.d.id})"></i>${E(x.d.label)}</div><div class="qd-bar"><i style="width:${x.it ? Math.max(1, (x.it.loss[L] / max) * 100) : 0}%;background:var(--d-${x.d.id})"></i></div><div class="qd-v num">${x.it ? M(x.it.loss[L]) : '—'}</div><div class="qd-r num">${x.it && R.net > 0 ? RR.n0((x.it.loss[L] / R.net) * 100) + '%' : ''}</div></div>`).join('')}</div>
 <div id="qmap" class="figbox"></div><p class="fine">係数の初期値は仮置きです。金額は試算で、補償の可否を示すものではありません。<a href="#report">簡易版レポートを開く</a></p>`;
-    RR.charts.mount($('#qmap'), 'riskMap', { state: 'A', max: 10 }, build ? 'build' : false);
+    RR.charts.mount($('#qmap'), 'riskMap', { state: 'B', max: 10 }, build ? 'build' : false);
   }
   const quickLive = debounce(() => renderQuickLive(false), 140);
-  function onQuickInput(el) {
-    const q = RR.qById[el.dataset.q]; const v = readInput(q, el);
-    if (RR.layers[q.layer].kind === 'items') { const had = RR.case.items[q.id]; RR.setItem(q.id, v, had ? null : { method: '聞き取り', src: '簡易入力', date: RR.today() }); if (q.id === 'co_industry') { RR.rebuild(); } }
-    else { const r = firstRec(q.layer, true); r.f[q.id] = v; if (q.id === 'hz_depth_max') {} RR.touch(); }
+  function onQuickField(el) {
+    const [layer, siteId, qid] = el.dataset.qk.split('|'); const q = RR.qById[qid]; if (!q) return; const v = readInput(q, el);
+    if (layer === 'item') { const had = RR.case.items[qid]; RR.setItem(qid, v, had ? null : { method: '聞き取り', src: '簡易入力', date: RR.today() }); if (qid === 'co_industry') { RR.rebuild(); RR.result = null; renderQuick(); return; } }
+    else { const r = recFor(layer, siteId || null, true); if (!r) return; if (v === '') delete r.f[qid]; else r.f[qid] = v; RR.touch(); }
     quickLive();
+  }
+  function onQuickIns(el) {
+    const [label, k] = el.dataset.qins.split('|'); let p = RR.rows('policy').find((x) => x.f.pol_type === label);
+    const v = el.tagName === 'SELECT' ? el.value : el.value === '' ? '' : Number(el.value);
+    if (!p) { if (v === '') return; p = RR.addRow('policy', { pol_type: label, pol_status: k === 'pol_status' ? v : '加入', pol_sites: '全拠点' }, QPROV()); }
+    if (k === 'dedopt') { let d = RR.rows('dedopt').find((o) => o.f.do_pol === p.id); if (v === '') { if (d) RR.rows('dedopt').splice(RR.rows('dedopt').indexOf(d), 1); } else { if (!d) d = RR.addRow('dedopt', { do_pol: p.id, do_note: '簡易入力' }, QPROV()); d.f.do_ded = v; } }
+    else if (v === '') delete p.f[k]; else p.f[k] = v;
+    RR.touch(); quickLive();
+  }
+  function writeAssume(riskName, siteId, k, v) {
+    let a = RR.rows('assume').find((x) => x.f.as_risk === riskName && (siteId ? x.f.as_site === siteId : !x.f.as_site));
+    if (!a) { if (v === '' || v === null) return; a = RR.addRow('assume', { as_risk: riskName, as_site: siteId || '' }, QPROV()); }
+    if (v === '' || v === null) delete a.f[k]; else a.f[k] = v; RR.touch();
+  }
+  function onQuickScn(el) {
+    const [sid, k] = el.dataset.qscn.split('|'); const sc = RR.scenarios.find((x) => x.id === sid); const r = RR.riskById[sc.primary]; if (!r) return;
+    const v = el.tagName === 'SELECT' && k !== 'as_period' ? el.value : el.value === '' ? '' : Number(el.value); writeAssume(r.name, null, k, v); quickLive();
   }
   function onQuickPrep(el) {
     const lv = el.value ? RR.prepLevels[Number(el.value) - 1] : '';
-    for (const r of RR.risks.filter((x) => x.domain === el.dataset.quickprep)) { let p = RR.rows('prep').find((x) => x.f.prep_risk === r.name && !x.f.prep_site); if (!p) p = RR.addRow('prep', { prep_risk: r.name }, { row: { src: '簡易入力', date: RR.today(), method: '聞き取り' } }); p.f.prep_alt = lv; }
+    for (const r of RR.risks.filter((x) => x.domain === el.dataset.quickprep)) { let p = RR.rows('prep').find((x) => x.f.prep_risk === r.name && !x.f.prep_site); if (!p) p = RR.addRow('prep', { prep_risk: r.name }, QPROV()); p.f.prep_alt = lv; }
     RR.touch(); quickLive();
   }
+
+  /* ---------- 事故想定 ---------- */
+  function renderScenario() {
+    const host = $('#v-scenario'); const R = RR.compute(), L = R.level; const data = RR.report.scenarioData(); const pmo = ['', 1, 3, 5, 10, 20, 30, 50, 100, 200, 500];
+    const card = ({ sc, its, prim, as }) => {
+      const f = as ? as.f : {}; const g = prim ? prim.ins[L].seg : null; const key = `${sc.id}`;
+      const nf = (k, ph) => `<input type="number" step="any" class="numf" data-qscn="${key}|${k}" value="${f[k] === undefined ? '' : E(f[k])}" placeholder="${E(ph || '')}" aria-label="${k}">`;
+      const posts = RR.report.postsAt('scn:' + sc.id);
+      return `<article class="scn" id="scn-${sc.id}"><div class="scn-top"><div><div class="kicker">${sc.bodily ? '身体・財物への損害に注意' : '事故の想定'}</div><h2>${E(sc.name)}</h2></div>${prim ? `<div class="scn-k"><div><span>何年に1度</span><b>${E(RR.periodText(prim.T))}</b></div><div><span>現実的な損害</span><b class="num">${M(prim.loss[0])}</b></div><div><span>最大の損害</span><b class="num">${M(prim.loss[2])}</b></div><div><span>自己負担（${E(RR.levelShort[L])}）</span><b class="num">${M(g.ded + g.gap + g.over)}</b></div></div>` : '<p class="fine">回答からは試算されていません（該当なし、または未記入）。下の欄に想定を入れると評価に加わります。</p>'}</div>
+${prim ? `<div class="scn-bar">${RR.charts.SEG.map(([k, l, c]) => (g[k] > 0 ? `<i style="flex:${g[k]};background:${c}" title="${E(l + '：' + RR.money(g[k]))}"></i>` : '')).join('')}</div><p class="fine">${RR.charts.SEG.filter(([k]) => g[k] > 0).map(([k, l]) => `${E(l)} ${M(g[k])}`).join('　')}</p>` : ''}
+<div class="scn-grid"><div class="scn-in"><h3>この会社での想定</h3>
+<label>何年に1度程度起こるか <select data-qscn="${key}|as_period">${pmo.map((v) => `<option value="${v}"${String(v) === String(f.as_period === undefined ? '' : f.as_period) ? ' selected' : ''}>${v === '' ? '（試算を使う）' : v === 1 ? '毎年' : v + '年に1度'}</option>`).join('')}</select></label>
+<label>現実的に想定する損害（百万円） ${nf('as_real', prim ? '試算 ' + RR.n1(prim.calcLoss[0]) : '')}</label><label>最大の損害（百万円） ${nf('as_max', prim ? '試算 ' + RR.n1(prim.calcLoss[2]) : '')}</label>
+<label>身体・財物に大きな損害を与える事故か <select data-qscn="${key}|as_bodily"><option></option>${['想定される', '想定されない', '不明'].map((o) => `<option${o === f.as_bodily ? ' selected' : ''}>${o}</option>`).join('')}</select></label>
+<label>対応手順 <select data-qscn="${key}|as_ready"><option></option>${['手順書と訓練あり', '手順書あり', 'なし'].map((o) => `<option${o === f.as_ready ? ' selected' : ''}>${o}</option>`).join('')}</select></label>
+<label>担当部署 <input data-qscn="${key}|as_owner" value="${E(f.as_owner || '')}"></label>
+<label>この会社で追加して対応すること <textarea data-qscn="${key}|as_actions" rows="2">${E(f.as_actions || '')}</textarea></label></div>
+<div class="scn-act"><h3>起きたときに、しなければならないこと</h3>${Object.keys(sc.actions || {}).map((k) => `<div class="act"><div class="act-h">${E(k)}</div><ul>${sc.actions[k].map((x) => `<li>${E(x)}</li>`).join('')}</ul></div>`).join('')}
+${its.length ? `<h3>関係するリスク</h3><ul class="prl">${its.slice(0, 8).map((i) => `<li data-key="${E(i.key)}" tabindex="0" class="lk">${lab(i)}<span>${E(RR.levelShort[L])} ${M(i.loss[L])}・自己負担 ${M(i.uninsured[L])}</span></li>`).join('')}</ul>` : ''}</div></div>
+<div class="scn-posts">${posts.length ? `<div class="paper-root postlist">${RR.report.postBlocks(posts).join('')}</div>` : ''}<button type="button" class="btn sm" data-act="post-new" data-place="scn:${sc.id}">＋ 写真・資料を追加</button></div></article>`;
+    };
+    host.innerHTML = `<div class="pagehead"><div><h1>事故想定</h1><p>サイバー攻撃、台風、地震、洪水、火災、落雷、従業員の怪我などの大きな事故について、何年に1度程度起こるか、現実的な損害と最大の損害、保険の手当て、起きたときにしなければならないことを整理します。入れた想定は、診断とレポートに反映されます。</p></div></div>
+<nav class="scn-nav">${data.map(({ sc, prim }) => `<a href="#scenario" data-jump="scn-${sc.id}" class="${prim ? '' : 'dim'}">${E(sc.name)}</a>`).join('')}</nav>${data.map(card).join('')}`;
+  }
+
+  /* ---------- 保険と免責 ---------- */
+  function renderInsurance() {
+    const host = $('#v-insurance'); const B = RR.report.B; const ctx = { quick: false };
+    host.innerHTML = `<div class="pagehead"><div><h1>保険と免責</h1><p>リスクの把握・包括保険・個別保険の3つを整理し、どこが自己負担になるかを示します。免責金額を引き上げて保険料を下げた場合の比較もここで行います。</p></div></div>
+<section class="panel"><h2>3つの整理</h2>${B.three_overview(null, ctx).join('')}</section>
+<section class="figsec"><div class="fighead"><div><h2>補償の積み上げ</h2><p>1本の帯が1つのリスクの損害額。免責・個別保険・自己負担の帯・包括保険・手当てなしに分けています。</p></div></div><div id="fig-tower" class="figbox"></div></section>
+<section class="panel">${B.umbrella_table().join('')}</section>
+<section class="panel"><h2>保険証券（個別保険と包括保険）</h2><p class="fine">未加入の種目も1行入れておくと、「手当てなし」として整理できます。包括（アンブレラ）は、種目に「包括（アンブレラ）」を選び、対象範囲・免責金額・支払限度額を入れます。</p>${editor('policy')}</section>
+<section class="panel"><h2>免責の見直し</h2><p>対象の証券IDと検討する免責金額を入れます。保険会社の見積があれば「その場合の年間保険料」に入れてください。空欄の場合は係数表の目安（仮置き）で試算します。小口の事故の年間件数と平均額は、上の証券の表に入れます。</p>${editor('dedopt')}<div id="fig-ded" class="figbox"></div>${B.dedsim_table().join('')}</section>
+<section class="panel">${B.uncovered_table().join('')}</section>`;
+    RR.charts.mount($('#fig-tower'), 'tower', {}, false); RR.charts.mount($('#fig-ded'), 'dedsim', {}, false);
+    if ($('#fig-ded').querySelector('.viz-empty')) $('#fig-ded').innerHTML = '';
+  }
+
+  /* ---------- 写真と資料（ブログのように、どこにでも差し込む） ---------- */
+  function renderPosts() {
+    const host = $('#v-posts'); const places = RR.places(); const list = RR.rows('post').filter((m) => !st.postFilter || m.f.md_place === st.postFilter);
+    const card = (m) => { const f = m.f; return `<article class="pcard" data-id="${E(m.id)}"><div class="pc-img" data-act="post-pick" data-id="${E(m.id)}" tabindex="0" title="クリックで選択、ドロップ、または貼り付け（Ctrl+V）">${f.md_image ? `<img src="${f.md_image}" alt="">` : '<span>画像をドロップ<br>クリックで選択<br>または貼り付け</span>'}</div>
+<div class="pc-body"><input class="pc-title" data-post="${E(m.id)}|md_title" value="${E(f.md_title || '')}" placeholder="タイトル（例：受変電設備は、想定浸水深より低い位置にあります）" aria-label="タイトル">
+<textarea data-post="${E(m.id)}|md_text" rows="4" placeholder="コメント：何が分かるか、なぜ大事か、どうすればよいか" aria-label="コメント">${E(f.md_text || '')}</textarea>
+<div class="pc-meta"><label>掲載する場所 <select data-post="${E(m.id)}|md_place">${places.map((p) => `<option value="${E(p.v)}"${p.v === f.md_place ? ' selected' : ''}>${E(p.l)}</option>`).join('')}</select></label><label>種類 <select data-post="${E(m.id)}|md_kind">${['現地写真', '引用図・資料', '図解・メモ'].map((o) => `<option${o === f.md_kind ? ' selected' : ''}>${o}</option>`).join('')}</select></label><label>大きさ <select data-post="${E(m.id)}|md_size">${['大きく', '標準', '小さく（2列）'].map((o) => `<option${o === (f.md_size || '標準') ? ' selected' : ''}>${o}</option>`).join('')}</select></label><label>撮影・取得日 <input type="date" data-post="${E(m.id)}|md_date" value="${E(f.md_date || '')}"></label><label class="wide">出典・引用元 <input data-post="${E(m.id)}|md_source" value="${E(f.md_source || '')}" placeholder="例：○○市 洪水ハザードマップ（2024年）"></label></div>
+<div class="row"><button type="button" class="btn sm ghost" data-act="post-up" data-id="${E(m.id)}">↑</button><button type="button" class="btn sm ghost" data-act="post-down" data-id="${E(m.id)}">↓</button>${f.md_image ? `<button type="button" class="btn sm ghost" data-act="post-clearimg" data-id="${E(m.id)}">画像を外す</button>` : ''}<button type="button" class="btn sm ghost" data-act="post-del" data-id="${E(m.id)}">削除</button></div></div></article>`; };
+    host.innerHTML = `<div class="pagehead"><div><h1>写真・資料</h1><p>現地の写真、ハザードマップなどの引用図、面談のメモを、タイトルとコメントつきの「記事」として、レポートのどの章・拠点・事故想定にも差し込めます。画像はこの端末の中にだけ保存されます（大きな画像は自動で縮小します）。</p></div></div>
+<div class="row"><button type="button" class="btn pri" data-act="post-new" data-place="${E(st.postFilter || 'ch:c1')}">＋ 記事を追加</button><label>表示 <select id="post-filter"><option value="">すべての場所（${RR.rows('post').length}件）</option>${places.filter((p) => RR.rows('post').some((m) => m.f.md_place === p.v)).map((p) => `<option value="${E(p.v)}"${p.v === st.postFilter ? ' selected' : ''}>${E(p.l)}（${RR.rows('post').filter((m) => m.f.md_place === p.v).length}）</option>`).join('')}</select></label><input type="file" id="post-file" accept="image/*" hidden></div>
+<div class="pcards">${list.map(card).join('') || '<p class="fine">記事はまだありません。「＋ 記事を追加」から始めます。</p>'}</div>`;
+  }
+  function setPostImage(id, file) { const m = RR.rows('post').find((x) => x.id === id); if (!m || !file) return; shrink(file).then((url) => { m.f.md_image = url; RR.touch(); if (!RR.saved) RR.toast('端末の保存容量を超えました。画像を減らすか、「データ」画面でJSONに書き出してください'); renderPosts(); }); }
+  function newPost(place) { const m = RR.addRow('post', { md_place: place || 'ch:c1', md_kind: '現地写真', md_size: '標準', md_date: RR.today() }, QPROV()); RR.touch(); st.postFilter = ''; go('posts'); setTimeout(() => { render(); const el = document.querySelector(`.pcard[data-id="${m.id}"] .pc-title`); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 30); }
 
   /* ---------- データ（Excelの往復と編集） ---------- */
   function editor(layer) {
@@ -149,7 +253,7 @@ ${it.unconfirmed.length ? `<p class="uncbox"><span class="unc">未確認</span> 
   }
   function renderData() {
     const host = $('#v-data'); const P = st.pending; const xl = RR.excel.ready();
-    const layerTabs = Object.keys(RR.layers).filter((l) => l !== 'proposal').map((l) => `<button type="button" data-seg="layer" data-val="${l}" class="${st.layer === l ? 'on' : ''}">${E(RR.t(RR.layers[l].label))}<small>${RR.layers[l].kind === 'table' ? RR.rows(l).length : ''}</small></button>`).join('');
+    const layerTabs = Object.keys(RR.layers).filter((l) => l !== 'proposal' && l !== 'post').map((l) => `<button type="button" data-seg="layer" data-val="${l}" class="${st.layer === l ? 'on' : ''}">${E(RR.t(RR.layers[l].label))}<small>${RR.layers[l].kind === 'table' ? RR.rows(l).length : ''}</small></button>`).join('');
     host.innerHTML = `<div class="pagehead"><div><h1>データ</h1><p>Excel様式を出力して顧客に記入してもらい、記入済みのファイルをここに入れると、検証してから診断とレポートに反映します。ファイルは端末の外に送信しません。</p></div></div>
 ${xl ? '' : '<div class="notice bad">Excelを読み書きする部品を読み込めませんでした。インターネットに接続して開き直すか、すべてを内蔵した index.offline.html を使ってください。JSONでの書き出し・読み込みと画面での編集は使えます。</div>'}
 <div class="cols2">
@@ -163,7 +267,7 @@ ${xl ? '' : '<div class="notice bad">Excelを読み書きする部品を読み�
 </div>
 ${P ? `<section class="panel pend"><h2>読み込みの結果：${E(P.name)}</h2><p>${P.kind === 'check' ? 'いまのデータの検証結果です。' : `読めた内容：拠点 ${P.case.rows.site.length}件、建物 ${P.case.rows.building.length}件、工程 ${P.case.rows.line.length}件、証券 ${P.case.rows.policy.length}件、全社の項目 ${Object.keys(P.case.items).length}件。問題があっても、読めた分だけで診断を進められます。`}</p>${issueTable(P.issues)}
 ${P.kind === 'check' ? '<div class="row"><button type="button" class="btn" data-act="pend-cancel">閉じる</button></div>' : `<h3>いまのデータから変わる項目（${P.diff.length}件）</h3>${P.diff.length ? `<div class="tablewrap tall"><table class="grid"><thead><tr><th>種類</th><th>対象</th><th>項目</th><th>いま</th><th>読み込み後</th></tr></thead><tbody>${P.diff.slice(0, 400).map((d) => `<tr><td>${E(d.type)}</td><td>${E(d.where)}</td><td>${E(d.label)}</td><td class="old">${E(d.old)}</td><td class="new">${E(d.new)}</td></tr>`).join('')}</tbody></table></div>${P.diff.length > 400 ? `<p class="fine">ほか${P.diff.length - 400}件。</p>` : ''}` : '<p class="ok">いまのデータと同じ内容です。</p>'}
-<div class="row"><label class="chk"><input type="checkbox" id="x-keep" checked> 改善提案・写真と所見・AIの文章は、いまのものを引き継ぐ</label></div><div class="row"><button type="button" class="btn pri" data-act="pend-apply">この内容を反映する</button><button type="button" class="btn" data-act="pend-cancel">やめる</button></div>`}</section>` : ''}
+<div class="row"><label class="chk"><input type="checkbox" id="x-keep" checked> 改善提案・写真と所見・写真と資料・AIの文章は、いまのものを引き継ぐ</label></div><div class="row"><button type="button" class="btn pri" data-act="pend-apply">この内容を反映する</button><button type="button" class="btn" data-act="pend-cancel">やめる</button></div>`}</section>` : ''}
 <section class="panel"><h2>3　画面で確認・編集する</h2><div class="tabs">${layerTabs}</div><div id="editor">${editor(st.layer)}</div></section>`;
   }
   async function exportXlsx(edition, sample) {
@@ -183,7 +287,7 @@ ${P.kind === 'check' ? '<div class="row"><button type="button" class="btn" data-
   }
   function applyPending() {
     const P = st.pending; if (!P) return; const c = P.case; const keep = $('#x-keep') && $('#x-keep').checked;
-    if (keep) { c.rows.proposal = RR.case.rows.proposal || []; c.rows.finding = RR.case.rows.finding || []; c.ai = RR.case.ai || {}; }
+    if (keep) { c.rows.proposal = RR.case.rows.proposal || []; c.rows.finding = RR.case.rows.finding || []; c.rows.post = RR.case.rows.post || []; c.ai = RR.case.ai || {}; }
     c.settings = RR.case.settings; c.meta.isSample = false; for (const l in c.rows) c.rows[l].forEach((r) => { delete r._row; delete r._sheet; });
     RR.setCase(c); st.pending = null; st.built = false; st.reportKey = ''; RR.toast('反映しました。診断を更新しました'); go('home');
   }
@@ -249,9 +353,17 @@ ${RR.DEF_NAMES.map((n) => `<details class="def"><summary>${E(RR.DEF_LABELS[n])}<
       if (k === 'edition') { st.edition = v; renderReport(); return; }
       if (k === 'prompt') { st.promptKey = v; renderAI(); return; }
     }
+    if (t.dataset.jump) { const go2 = () => { const el = document.getElementById(t.dataset.jump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; if (st.view !== 'scenario') setTimeout(go2, 80); else { e.preventDefault(); go2(); } closeDrawer(); return; }
     if (t.dataset.key && !t.dataset.act) { if (!t.dataset.key.startsWith('site:')) openRisk(t.dataset.key); return; }
     const a = t.dataset.act;
     if (a === 'close-drawer') closeDrawer();
+    else if (a === 'q-add-site') { const n = RR.rows('site').length + 1; RR.addRow('site', { site_name: '拠点' + n, site_use: '工場' }, QPROV()); RR.touch(); renderQuick(); }
+    else if (a === 'q-del-site') { const id = t.dataset.id; if (confirm(`${id} と、その建物・自然災害・工程の行を削除します。よろしいですか。`)) { const rs = RR.rows('site'); rs.splice(rs.findIndex((x) => x.id === id), 1); for (const l in RR.layers) { const sf = RR.layers[l].siteField; if (sf && RR.layers[l].kind === 'table') RR.case.rows[l] = RR.rows(l).filter((r) => r.f[sf] !== id); } RR.touch(); renderQuick(); } }
+    else if (a === 'post-new') { closeDrawer(); newPost(t.dataset.place); }
+    else if (a === 'post-pick') { st.pickId = t.dataset.id; $('#post-file').click(); }
+    else if (a === 'post-del') { const rs = RR.rows('post'); const i = rs.findIndex((x) => x.id === t.dataset.id); if (i >= 0 && confirm('この記事を削除します。よろしいですか。')) { rs.splice(i, 1); RR.touch(); renderPosts(); } }
+    else if (a === 'post-up' || a === 'post-down') { const rs = RR.rows('post'); const i = rs.findIndex((x) => x.id === t.dataset.id); const j = a === 'post-up' ? i - 1 : i + 1; if (i >= 0 && j >= 0 && j < rs.length) { [rs[i], rs[j]] = [rs[j], rs[i]]; RR.touch(); renderPosts(); } }
+    else if (a === 'post-clearimg') { const m = RR.rows('post').find((x) => x.id === t.dataset.id); if (m) { delete m.f.md_image; RR.touch(); renderPosts(); } }
     else if (a === 'blank') { if (confirm('いまのデータを消して、白紙の案件にします。よろしいですか。（必要なら先に「データ」画面でJSONを書き出してください）')) { const c = RR.emptyCase(); c.items.co_industry = { v: '製造', src: '', date: '', method: '未確認', note: '' }; RR.setCase(c); st.built = false; st.reportKey = ''; render(); RR.toast('白紙の案件にしました'); } }
     else if (a === 'sample') { if (confirm('いまのデータを消して、サンプル（架空）のデータに戻します。よろしいですか。')) { RR.setCase(RR.buildSample()); st.built = false; st.reportKey = ''; render(); RR.toast('サンプルのデータに戻しました'); } }
     else if (a === 'xl-full') exportXlsx('full'); else if (a === 'xl-quick') exportXlsx('quick'); else if (a === 'xl-sample') exportXlsx('full', true);
@@ -271,6 +383,12 @@ ${RR.DEF_NAMES.map((n) => `<details class="def"><summary>${E(RR.DEF_LABELS[n])}<
   }
   function onChange(e) {
     const el = e.target; const d = el.dataset;
+    if (d.qk) { onQuickField(el); return; } if (d.qins) { onQuickIns(el); return; }
+    if (d.qscn) { onQuickScn(el); if (st.view === 'scenario' && el.tagName === 'SELECT') renderScenario(); return; }
+    if (d.adj) { const [nm, sid, k] = d.adj.split('|'); writeAssume(nm, sid || null, k, el.value === '' ? '' : Number(el.value)); RR.toast('想定を反映しました'); return; }
+    if (d.post) { const [id, k] = d.post.split('|'); const m = RR.rows('post').find((x) => x.id === id); if (m) { m.f[k] = el.value; RR.touch(); } return; }
+    if (el.id === 'post-filter') { st.postFilter = el.value; renderPosts(); return; }
+    if (el.id === 'post-file') { if (el.files[0] && st.pickId) setPostImage(st.pickId, el.files[0]); el.value = ''; return; }
     if (el.id === 'f-site') { st.site = el.value; $('#f-all').disabled = !!st.site; drawFigs(false); }
     else if (el.id === 'f-all') { st.all = el.checked; drawFigs(false); }
     else if (el.id === 'f-level' || el.id === 's-level') { RR.case.settings.level = Number(el.value); RR.touch(); st.reportKey = ''; if (st.view === 'home') renderHome(); }
@@ -278,7 +396,7 @@ ${RR.DEF_NAMES.map((n) => `<details class="def"><summary>${E(RR.DEF_LABELS[n])}<
     else if (el.id === 'j-file') { const f = el.files[0]; if (f) f.text().then((tx) => { try { const c = JSON.parse(tx); if (!c.items || !c.rows) throw new Error('案件データの形ではありません'); RR.setCase(c); st.built = false; st.reportKey = ''; RR.toast('案件データを読み込みました'); go('home'); render(); } catch (err) { RR.toast('読み込めませんでした：' + err.message); } }); el.value = ''; }
     else if (el.id === 'r-jump') { const p = $('#pg-' + el.value); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else if (el.id === 'ai-mask') { RR.case.settings.mask = el.checked; RR.saveCase(); renderAI(); }
-    else if (d.quick) onQuickInput(el); else if (d.quickprep) onQuickPrep(el);
+    else if (d.quickprep) onQuickPrep(el);
     else if (d.edit === 'item') { const q = RR.qById[d.q]; RR.setItem(q.id, readInput(q, el)); if (q.id === 'co_industry') { RR.rebuild(); renderData(); } const u = el.parentNode.querySelector('.unc'); if (u && el.value !== '') u.remove(); }
     else if (d.edit === 'item-prov') { const it = RR.case.items[d.q] || (RR.case.items[d.q] = { v: '', src: '', date: '', method: '未確認', note: '' }); it[d.k] = el.value; RR.touch(); }
     else if (d.edit === 'row') { const q = RR.qById[d.q]; const r = RR.rows(d.layer).find((x) => x.id === d.id); if (!r) return; if (q.type === 'image') { const f = el.files[0]; if (f) shrink(f).then((url) => { r.f[q.id] = url; RR.touch(); render(); }); return; } const v = readInput(q, el); if (v === '') delete r.f[q.id]; else r.f[q.id] = v; RR.touch(); }
@@ -287,19 +405,20 @@ ${RR.DEF_NAMES.map((n) => `<details class="def"><summary>${E(RR.DEF_LABELS[n])}<
     else if (d.coefmeta) { const o = RR.raw.coefficients; o.tables.find((x) => x.id === d.coefmeta)[d.k] = el.value; RR.saveDef('coefficients', o); st.reportKey = ''; }
     else if (d.lname !== undefined || d.lshort !== undefined) { const o = RR.raw.coefficients; if (d.lname !== undefined) o.levelNames[Number(d.lname)] = el.value; else o.levelShort[Number(d.lshort)] = el.value; RR.saveDef('coefficients', o); RR.result = null; st.reportKey = ''; RR.toast('水準の呼び名を変更しました'); }
   }
-  function onInput(e) { const el = e.target; if (el.dataset.quick && el.tagName !== 'SELECT') onQuickInput(el); else if (el.id === 'aiout') { RR.case.ai[st.promptKey] = el.value; st.reportKey = ''; saveSoon(); } }
+  function onInput(e) { const el = e.target; if (el.dataset.qk && el.tagName !== 'SELECT') onQuickField(el); else if (el.dataset.qins && el.tagName !== 'SELECT') onQuickIns(el); else if (el.dataset.qscn && el.tagName !== 'SELECT' && el.tagName !== 'TEXTAREA' && st.view === 'quick') onQuickScn(el); else if (el.dataset.post) { const [id, k] = el.dataset.post.split('|'); const m = RR.rows('post').find((x) => x.id === id); if (m) { m.f[k] = el.value; saveSoon(); } } else if (el.id === 'aiout') { RR.case.ai[st.promptKey] = el.value; st.reportKey = ''; saveSoon(); } }
   const saveSoon = debounce(() => RR.saveCase(), 500);
   function shrink(file) { return new Promise((res) => { const img = new Image(); const url = URL.createObjectURL(file); img.onload = () => { const k = Math.min(1, 900 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.78)); }; img.src = url; }); }
 
   RR.start = function () {
     RR.loadDefs(); const th = RR.LS.get('rr.theme'); if (th) document.documentElement.dataset.theme = th;
-    const saved = RR.LS.get('rr.case'); RR.case = RR.emptyCase(); if (saved && saved.items && saved.rows) RR.setCase(saved, { save: false }); else RR.setCase(RR.buildSample());
+    const saved = RR.LS.get('rr.case'); RR.case = RR.emptyCase(); if (saved && saved.items && saved.rows && !(saved.meta && saved.meta.isSample && saved.meta.sampleVer !== 2)) RR.setCase(saved, { save: false }); else RR.setCase(RR.buildSample());
     $('#nav').innerHTML = VIEWS.map(([v, l]) => `<a href="#${v}" data-v="${v}">${l}</a>`).join('');
     document.addEventListener('click', onClick); document.addEventListener('change', onChange); document.addEventListener('input', onInput);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.key && e.target.tagName !== 'BUTTON') { e.preventDefault(); openRisk(e.target.dataset.key); } });
     document.addEventListener('toggle', (e) => { const d = e.target; if (d.classList && d.classList.contains('def') && d.open) { const ta = d.querySelector('textarea'); if (!ta.value) ta.value = prettyDef(ta.dataset.def); } }, true);
     $('#scrim').addEventListener('click', closeDrawer);
-    const dz = document.body; ['dragover', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; e.preventDefault(); if (ev === 'drop') { const f = e.dataTransfer.files[0]; if (f && /\.xlsx$/i.test(f.name)) { if (st.view !== 'data') { go('data'); setTimeout(() => importXlsx(f), 60); } else importXlsx(f); } else RR.toast('.xlsx のファイルを置いてください'); } }));
+    document.addEventListener('paste', (e) => { if (st.view !== 'posts') return; const card = (document.activeElement && document.activeElement.closest && document.activeElement.closest('.pcard')) || null; const items = Array.from((e.clipboardData || {}).items || []); const img = items.find((i) => i.type && i.type.startsWith('image/')); if (!img) return; e.preventDefault(); const id = card ? card.dataset.id : null; if (id) setPostImage(id, img.getAsFile()); else { const m = RR.addRow('post', { md_place: st.postFilter || 'ch:c1', md_kind: '引用図・資料', md_size: '標準', md_date: RR.today() }, QPROV()); setPostImage(m.id, img.getAsFile()); } });
+    const dz = document.body; ['dragover', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; e.preventDefault(); if (ev === 'drop') { const f = e.dataTransfer.files[0]; const pc = e.target.closest && e.target.closest('.pcard'); if (pc && f && f.type.startsWith('image/')) { setPostImage(pc.dataset.id, f); return; } if (f && /\.xlsx$/i.test(f.name)) { if (st.view !== 'data') { go('data'); setTimeout(() => importXlsx(f), 60); } else importXlsx(f); } else RR.toast('.xlsx のファイルを置いてください'); } }));
     window.addEventListener('hashchange', route);
     window.addEventListener('resize', debounce(() => { if (st.view === 'home') drawFigs(false); else if (st.view === 'quick') renderQuickLive(false); else if (st.view === 'report') fitPages(); }, 200));
     window.addEventListener('beforeprint', () => { const p = $('#pages'); if (p) p.style.zoom = 1; }); window.addEventListener('afterprint', fitPages);

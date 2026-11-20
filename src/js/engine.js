@@ -154,20 +154,49 @@
   };
   F.bi = function (c, fx, noAlt) {
     const margin = (RR.num('co_margin') || 0) / 100; const loss = [0, 0, 0], basis = [[], [], []];
-    let lines = c.lines.map((l) => ({ name: l.f.line_name || l.id, rev: num(l.f.line_revenue) || 0, mo: num(l.f.line_recovery) || 0, alt: (num(l.f.line_alt_ratio) || 0) / 100 }));
+    let lines = c.lines.map((l) => { const rb = RR.hasRow('rebuy_factor', l.f.line_rebuy) ? RR.c('rebuy_factor', l.f.line_rebuy, 0) : 1, eo = RR.hasRow('eol_factor', l.f.line_eol) ? RR.c('eol_factor', l.f.line_eol, 0) : 1; return { name: l.f.line_name || l.id, rev: num(l.f.line_revenue) || 0, mo: num(l.f.line_recovery) || 0, alt: (num(l.f.line_alt_ratio) || 0) / 100, k2: rb * eo, rebuy: l.f.line_rebuy, eol: l.f.line_eol, rebuild: num(l.f.line_rebuild), age: num(l.f.line_age) }; });
     const notes = [];
     if (!lines.length) {
       const rev = RR.num('co_revenue') * (num(c.f.site_rev_share) || 0) / 100;
-      if (rev > 0) { lines = [{ name: '拠点全体', rev, mo: 6, alt: 0 }]; notes.push('工程・ラインが未記入のため、売上寄与分が6か月止まると仮定'); }
+      if (rev > 0) { lines = [{ name: '拠点全体', rev, mo: 6, alt: 0, k2: 1, rebuild: null }]; notes.push('工程・ラインが未記入のため、売上寄与分が6か月止まると仮定'); }
     }
     for (let L = 0; L < 3; L++) {
       const k = RR.c('bi_period', '倍率', L); const sev = L < 2 ? fx.sev : 1; let sum = 0; const parts = [];
       for (const l of lines) {
-        const alt = noAlt ? 0 : l.alt; const x = l.rev * (l.mo * k / 12) * (1 - alt) * margin * sev; sum += x;
-        parts.push(`${l.name}：売上 ${M(l.rev)} × 停止 ${RR.n1(l.mo * k)}か月÷12 ×（1−代替 ${RR.n0(alt * 100)}%）× 限界利益率 ${RR.n0(margin * 100)}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`);
+        const alt = noAlt ? 0 : l.alt; let mo = l.mo * k * l.k2; let why = l.k2 !== 1 ? `（再調達「${l.rebuy || '—'}」・保守「${l.eol || '—'}」で ×${Math.round(l.k2 * 100) / 100}）` : '';
+        if (L === 2 && l.rebuild !== null && l.rebuild > mo) { mo = l.rebuild; why = `（再構築にかかる期間 ${l.rebuild}か月を採用）`; }
+        const x = l.rev * (mo / 12) * (1 - alt) * margin * sev; sum += x;
+        parts.push(`${l.name}：売上 ${M(l.rev)} × 停止 ${RR.n1(mo)}か月${why}÷12 ×（1−代替 ${RR.n0(alt * 100)}%）× 限界利益率 ${RR.n0(margin * 100)}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`);
       }
       loss[L] = sum; basis[L] = [`復旧期間 × ${k}`].concat(parts.slice(0, 8), notes, [`損害額 ${M(sum)}`]);
     }
+    return { loss, basis, freq: null };
+  };
+  F.wind = function (c, fx) {
+    const ex = RR.hasRow('wind_ratio', c.hz.hz_wind) ? c.hz.hz_wind : '普通'; const loss = [0, 0, 0], basis = [[], [], []];
+    const roofK = c.blds.reduce((a, b, i) => a + c.shares[i] * (RR.hasRow('wind_roof', b.f.bld_roof) ? RR.c('wind_roof', b.f.bld_roof, 0) : 1), 0);
+    const kc = RR.c('wind_contents', '倍率', 0);
+    for (let L = 0; L < 3; L++) { const r = RR.c('wind_ratio', ex, L) * roofK * (L < 2 ? fx.sev : 1); const x = Math.min(c.V, c.vb * r + (c.ve + c.vs) * r * kc); loss[L] = x; basis[L] = [`受けやすさ「${ex}」の損害割合 ${RR.c('wind_ratio', ex, L)} × 屋根の種類による倍率 ${Math.round(roofK * 100) / 100}${L < 2 && fx.sev !== 1 ? ' × 劣化の状況 ' + Math.round(fx.sev * 100) / 100 : ''}`, `建物 ${M(c.vb)} × ${RR.n1(r * 100)}% ＋（設備・在庫 ${M(c.ve + c.vs)} × ${RR.n1(r * 100)}% × 雨水の浸入 ${kc}）＝ ${M(x)}`]; }
+    let freq = 2.5, fn = '基準 2.5'; if (ex === '受けやすい') { freq += 0.5; fn += '、台風・強風を受けやすい +0.5'; } if (ex === '受けにくい') { freq -= 0.5; fn += '、受けにくい −0.5'; } if (c.hz.hz_snow === '多い') { freq += 0.25; fn += '、積雪・雹が多い +0.25'; }
+    return { loss, basis, freq, freqNote: fn };
+  };
+  F.lightning = function (c, fx) {
+    if (!(c.ve > 0)) return null; let worst = null;
+    c.blds.forEach((b) => { const t = RR.hasRow('light_ratio', b.f.bld_lsens) ? b.f.bld_lsens : 'なし'; if (!worst || RR.c('light_ratio', t, 2) > RR.c('light_ratio', worst.t, 2)) worst = { b, t }; });
+    const t = worst.t; const spd = RR.hasRow('light_spd', worst.b.f.bld_spd) ? RR.c('light_spd', worst.b.f.bld_spd, 0) : 1;
+    const rev = RR.num('co_revenue') * (num(c.f.site_rev_share) || 0) / 100; const margin = RR.num('co_margin') / 100;
+    const loss = [0, 0, 0], basis = [[], [], []];
+    for (let L = 0; L < 3; L++) {
+      const r = RR.c('light_ratio', t, L) * (L < 2 ? spd : 1) * (L < 2 ? fx.sev : 1); const eq = c.ve * r; const days = RR.c('light_days', t, L) * (L < 2 ? spd : 1); const bi = rev * (days / 365) * margin;
+      loss[L] = eq + bi; basis[L] = [`落雷で甚大な被害が出る設備「${t}」（${worst.b.f.bld_name || worst.b.id}）、雷サージ対策「${worst.b.f.bld_spd || '未記入'}」${L < 2 ? ' ×' + spd : '（最悪の場合は対策が効かないと仮定）'}`, `設備 ${M(c.ve)} × ${RR.n1(r * 100)}% ＝ ${M(eq)}`, `停止 ${RR.n1(days)}日 × 拠点の売上 ${M(rev)}÷365 × 限界利益率 ${RR.n0(margin * 100)}% ＝ ${M(bi)}`, `損害額 ${M(loss[L])}`];
+    }
+    const th = c.hz.hz_thunder; const adj = RR.hasRow('light_thunder', th) ? RR.c('light_thunder', th, 0) : 0;
+    return { loss, basis, freq: 2 + adj, freqNote: `基準 2、落雷の多さ「${th || '未記入'}」${adj ? (adj > 0 ? ' +' : ' ') + adj : ''}` };
+  };
+  F.special = function (c) {
+    const r = num(c.f.site_special_real), m = num(c.f.site_special_max); if (r === null && m === null) return null;
+    const rr = r === null ? m * 0.2 : r, mm = m === null ? r * 3 : m; const mid = rr > 0 ? Math.sqrt(rr * mm) : mm / 2; const what = c.f.site_special || '拠点に特有の危険';
+    const loss = [rr, mid, mm]; const basis = loss.map((x) => [`「${what}」：担当者の想定 ${r === null ? '（現実的な損害は未記入のため最大の2割と仮定）' : '現実的な損害 ' + M(r)}${m === null ? '（最大の損害は未記入のため現実的な損害の3倍と仮定）' : '、最大の損害 ' + M(m)}`, `この水準の損害額 ${M(x)}`]);
     return { loss, basis, freq: null };
   };
 
@@ -192,59 +221,108 @@
     return best;
   };
   G.cyberStop = function (r, fx, noAlt) {
-    const sys = RR.rows('system'); if (!sys.length) return null;
+    let sys = RR.rows('system'); const unconf = [];
+    if (!sys.length) { sys = [{ id: '-', f: { sys_name: '基幹システム（仮定）', sys_rev_share: RR.c('cyber_default', '止まる売上の割合（%）', 0), sys_rto: RR.c('cyber_default', '復旧見込み（日）', 0), sys_backup: RR.val('cy_offline') || '取得のみ・復元未検証' } }]; unconf.push('システムの一覧（未記入のため仮定）'); }
     const rev = RR.num('co_revenue'), margin = RR.num('co_margin') / 100; let best = null;
     for (const s of sys) {
       const res = lv3((L) => {
         const share = (num(s.f.sys_rev_share) || 0) / 100; const kb = noAlt ? RR.c('cyber_backup', 'なし', 0) : RR.hasRow('cyber_backup', s.f.sys_backup) ? RR.c('cyber_backup', s.f.sys_backup, 0) : RR.c('cyber_backup', 'なし', 0);
         const days = (num(s.f.sys_rto) === null ? 7 : num(s.f.sys_rto)) * kb * RR.c('cyber_level', '倍率', L); const sev = L < 2 ? fx.sev : 1;
         const cost = RR.c('cyber_response', '費用', L); const x = rev * share * (days / 365) * margin * sev + cost;
-        return [x, [`${s.f.sys_name}`, `売上高 ${M(rev)} × 止まる割合 ${RR.n0(share * 100)}% × 停止 ${RR.n1(days)}日÷365（復旧見込み ${num(s.f.sys_rto) === null ? '7（未記入のため仮定）' : s.f.sys_rto}日 × バックアップ「${noAlt ? '考慮しない' : s.f.sys_backup || '未記入'}」${kb} × 水準 ${RR.c('cyber_level', '倍率', L)}）× 限界利益率 ${RR.n0(margin * 100)}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＋ 対応費用 ${M(cost)} ＝ ${M(x)}`]];
+        return [x, [`${s.f.sys_name}${s.id === '-' ? '（システムの一覧が未記入のため、係数表の仮定を使用）' : ''}`, `売上高 ${M(rev)} × 止まる割合 ${RR.n0(share * 100)}% × 停止 ${RR.n1(days)}日÷365（復旧見込み ${num(s.f.sys_rto) === null ? '7（未記入のため仮定）' : s.f.sys_rto}日 × バックアップ「${noAlt ? '考慮しない' : s.f.sys_backup || '未記入'}」${kb} × 水準 ${RR.c('cyber_level', '倍率', L)}）× 限界利益率 ${RR.n0(margin * 100)}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＋ 調査・復旧の対応費用 ${M(cost)} ＝ ${M(x)}`]];
       });
-      res.sub = s.f.sys_name;
+      res.sub = s.f.sys_name; res.unconf = unconf;
       if (!best || res.loss[1] > best.loss[1]) best = res;
     }
     return best;
   };
-  G.cyberLeak = (r, fx) => lv3((L) => { const n = RR.num('cy_pii'); const u = RR.c('leak_unit', '単価', L), fxd = RR.c('leak_fixed', '費用', L); const x = (n * u) / 1e6 + fxd; return [x, [`個人情報 ${RR.n0(n)}件 × ${RR.n0(u)}円 ＋ 固定費 ${M(fxd)} ＝ ${M(x)}`]]; });
+  G.cyberLeak = (r, fx) => { let n = num(RR.val('cy_pii')); const note = []; if (n === null) { n = (RR.num('co_employees') || 100) * 5; note.push(`保有する個人情報の件数が未記入のため、従業員数の5倍（${RR.n0(n)}件）と仮定`); } const res = lv3((L) => { const u = RR.c('leak_unit', '単価', L), fxd = RR.c('leak_fixed', '費用', L); const sev = L < 2 ? fx.sev : 1; const x = ((n * u) / 1e6 + fxd) * sev; return [x, [`個人情報 ${RR.n0(n)}件 × ${RR.n0(u)}円 ＋ 調査・通知の固定費 ${M(fxd)}${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`].concat(note)]; }); if (note.length) res.unconf = ['保有する個人情報の件数']; return res; };
+  G.food = (r, fx) => { const k = RR.val('lb_food'); if (!k || k === 'なし' || !RR.hasRow('food_amounts', k)) return null; return lv3((L) => { const a = RR.c('food_amounts', k, L), sev = L < 2 ? fx.sev : 1; return [a * sev, [`食中毒が起こりうる業務「${k}」：想定額 ${M(a)}（係数表）${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(a * sev)}`]]; }); };
+  const GATE = { bike: () => RR.val('lb_bike') && RR.val('lb_bike') !== 'なし', mycar: () => RR.val('lb_mycar') && RR.val('lb_mycar') !== 'なし', travel: () => (num(RR.val('ov_trips')) || 0) + (num(RR.val('ov_expat')) || 0) > 0 };
+  G.fixedCoef = (r, fx) => { if (GATE[r.id] && !GATE[r.id]()) return null; return lv3((L) => { const a = RR.c(r.formula.coef, '想定額', L), sev = L < 2 ? fx.sev : 1; return [a * sev, [`想定額 ${M(a)}（係数表）${sev !== 1 ? ' × 回答による補正 ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(a * sev)}`]]; }); };
   function prodBase() {
     const pd = RR.rows('product'); if (!pd.length) return { base: RR.num('co_revenue'), text: `売上高 ${M(RR.num('co_revenue'))}（製品群が未記入のため全社売上を使用）` };
     const safe = pd.filter((p) => p.f.pd_safety === 'あり'); const use = safe.length ? safe : pd; const base = use.reduce((a, p) => a + (num(p.f.pd_revenue) || 0), 0);
     return { base, text: `${safe.length ? '人の安全に関わる製品群' : '全製品群'}の売上 ${M(base)}（${use.map((p) => p.f.pd_name).join('、')}）` };
   }
-  G.pl = (r, fx) => { const b = prodBase(); const reg = RR.hasRow('pl_rates', RR.val('lb_region')) ? RR.val('lb_region') : '国内のみ'; return lv3((L) => { const rate = RR.c('pl_rates', reg, L), sev = L < 2 ? fx.sev : 1; const x = b.base * rate / 100 * sev; return [x, [b.text, `× 販売地域「${reg}」${rate}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`]]; }); };
-  G.recall = (r, fx) => { const b = prodBase(); const use = RR.hasRow('recall_rates', RR.val('lb_consumer')) ? RR.val('lb_consumer') : '業務用'; return lv3((L) => { const rate = RR.c('recall_rates', use, L), sev = L < 2 ? fx.sev : 1; const x = b.base * rate / 100 * sev; return [x, [b.text, `× 最終用途「${use}」${rate}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`]]; }); };
-  G.wc = (r, fx) => { const d = RR.val('hr_danger') === 'なし' ? 'なし' : 'あり'; return lv3((L) => { const a = RR.c('wc_amounts', d, L); return [a, [`危険を伴う作業「${RR.val('hr_danger') || '未記入（ありと仮定）'}」：想定額 ${M(a)}`]]; }); };
-  G.credit = function (r, fx) {
+  const noProducts = () => RR.pack && RR.pack.products === false && !RR.rows('product').length;
+  G.pl = (r, fx) => { if (noProducts()) return null; const b = prodBase(); const reg = RR.hasRow('pl_rates', RR.val('lb_region')) ? RR.val('lb_region') : '国内のみ'; return lv3((L) => { const rate = RR.c('pl_rates', reg, L), sev = L < 2 ? fx.sev : 1; const x = b.base * rate / 100 * sev; return [x, [b.text, `× 販売地域「${reg}」${rate}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`]]; }); };
+  G.recall = (r, fx) => { if (noProducts()) return null; const b = prodBase(); const use = RR.hasRow('recall_rates', RR.val('lb_consumer')) ? RR.val('lb_consumer') : '業務用'; return lv3((L) => { const rate = RR.c('recall_rates', use, L), sev = L < 2 ? fx.sev : 1; const x = b.base * rate / 100 * sev; return [x, [b.text, `× 最終用途「${use}」${rate}%${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`]]; }); };
+  G.wc = (r, fx) => { const d = RR.val('hr_danger') === 'なし' ? 'なし' : 'あり'; return lv3((L) => { const a = RR.c('wc_amounts', d, L), sev = L < 2 ? fx.sev : 1; return [a * sev, [`危険を伴う作業「${RR.val('hr_danger') || '未記入（ありと仮定）'}」：政府労災を超える賠償の想定額 ${M(a)}${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''}`]]; }); };
+  function creditFallback(side) {
     let rec = num(RR.val('fn_receivable')); const note = []; if (rec === null) { rec = RR.num('co_revenue') / 6; note.push('売掛金残高が未記入のため、売上高の2か月分と仮定'); }
-    let top = num(RR.val('fn_topcust')); if (top === null) { top = Math.max(0, ...RR.rows('partner').filter((p) => p.f.pt_type === '顧客').map((p) => num(p.f.pt_dep) || 0)); }
-    return lv3((L) => { const k = RR.c('credit_rates', '割合', L); const x = rec * top / 100 * k; return [x, [`売掛金 ${M(rec)} × 最大顧客の比率 ${RR.n0(top)}% × 回収不能 ${k} ＝ ${M(x)}`].concat(note)]; });
+    if (side === 'dom') { let top = num(RR.val('fn_topcust')); if (top === null) top = Math.max(0, ...RR.rows('partner').filter((p) => p.f.pt_type === '顧客').map((p) => num(p.f.pt_dep) || 0)); if (!(top > 0)) return null; return lv3((L) => { const k = RR.c('credit_rates', '割合', L); const x = rec * top / 100 * k; return [x, ['年間の最大貸倒れ額のヒアリングがないため、仮定で試算', `売掛金 ${M(rec)} × 最大顧客の比率 ${RR.n0(top)}% × 回収不能 ${k} ＝ ${M(x)}`].concat(note)]; }); }
+    const ex = num(RR.val('ov_export')); if (!(ex > 0) || RR.val('fn_export_terms') === '海外取引なし') return null;
+    return lv3((L) => { const k = RR.c('credit_rates', '割合', L) * 0.5; const x = rec * ex / 100 * k; return [x, ['年間の最大貸倒れ額のヒアリングがないため、仮定で試算', `売掛金 ${M(rec)} × 海外売上比率 ${RR.n0(ex)}% × ${k} ＝ ${M(x)}`].concat(note)]; });
+  }
+  G.creditH = function (r, fx) {
+    const side = r.formula.side; const real = num(RR.val(side === 'dom' ? 'fn_bd_real_dom' : 'fn_bd_real_ovs')), mx = num(RR.val(side === 'dom' ? 'fn_bd_max_dom' : 'fn_bd_max_ovs'));
+    if (real === null && mx === null) { const fb = creditFallback(side); if (fb) fb.unconf = ['年間の最大貸倒れ額（ヒアリング）']; return fb; }
+    const rr = real === null ? mx * 0.2 : real, mm = mx === null ? rr * 4 : Math.max(mx, rr); const mid = rr > 0 ? Math.sqrt(rr * mm) : mm / 2; const hist = num(RR.val('fn_bd_hist'));
+    const who = side === 'dom' ? '国内' : '海外';
+    return lv3((L) => { const x = [rr, mid, mm][L]; return [x, [`ヒアリング（${who}）：現実的に起こりうる年間の最大貸倒れ額 ${real === null ? '未記入（最悪の場合の2割と仮定）' : M(real)}、最悪の場合 ${mx === null ? '未記入（現実的な額の4倍と仮定）' : M(mx)}`, `この水準の損害額 ${M(x)}${L === 1 ? '（現実的な額と最悪の場合の中間）' : ''}`].concat(side === 'dom' && hist !== null ? [`参考：過去5年で最も多かった年の貸倒れ ${M(hist)}`] : []).concat(side === 'ovs' && RR.val('fn_export_terms') ? [`決済条件「${RR.val('fn_export_terms')}」`] : [])]; });
   };
   G.dno = (r, fx) => { const o = RR.hasRow('dno_amounts', RR.val('fn_owner')) ? RR.val('fn_owner') : '非上場・外部株主あり'; return lv3((L) => { const a = RR.c('dno_amounts', o, L); return [a, [`株主構成「${o}」：想定額 ${M(a)}`]]; }); };
 
-  /* ---------- 保険の当てはめ ---------- */
+  /* ---------- 保険の当てはめ（個別保険 → 包括保険の順に積み上げる） ---------- */
+  const isUmb = (pt, p) => !!(pt && pt.umbrella);
+  const scopeOf = (label) => RR.umbrellaScopes.find((x) => x.label === label) || RR.umbrellaScopes[RR.umbrellaScopes.length - 1] || { domains: [], exclude: [] };
+  const inScope = (sc, risk) => ((sc.domains || []).includes(risk.domain) || (sc.include || []).includes(risk.id)) && !(sc.exclude || []).includes(risk.id);
+  const active = (p) => !p.f.pol_status || p.f.pol_status === '加入';
   function policiesFor(risk, siteIds) {
     const out = [];
     for (const p of RR.rows('policy')) {
+      if (!active(p)) continue;
       const pt = RR.policyTypes.find((t) => t.label === p.f.pol_type); if (!pt) continue;
-      const covers = pt.covers.includes(risk.id) || (risk.insurance || []).includes(pt.id); if (!covers) continue;
+      const umb = isUmb(pt, p); let covers;
+      if (umb) covers = inScope(scopeOf(p.f.pol_scope), risk);
+      else covers = pt.covers.includes(risk.id) || (risk.insurance || []).includes(pt.id);
+      if (!covers) continue;
       let limit = num(p.f.pol_limit) || 0;
-      if ((pt.floodGated || []).includes(risk.id)) { if (p.f.pol_flood !== 'あり') continue; if (num(p.f.pol_flood_limit) !== null) limit = num(p.f.pol_flood_limit); }
+      if (!umb && (pt.floodGated || []).includes(risk.id)) { if (p.f.pol_flood !== 'あり') continue; if (num(p.f.pol_flood_limit) !== null) limit = num(p.f.pol_flood_limit); }
       const tg = String(p.f.pol_sites || '全拠点').trim();
       if (siteIds && siteIds.length && tg !== '全拠点' && tg !== '') { const ids = tg.split(/[,、\s]+/); if (!siteIds.some((s) => ids.includes(s))) continue; }
-      out.push({ id: p.id, type: p.f.pol_type, insurer: p.f.pol_insurer || '', limit, ded: num(p.f.pol_ded) || 0, expiry: p.f.pol_expiry || '' });
+      out.push({ id: p.id, type: p.f.pol_type, insurer: p.f.pol_insurer || '', limit, ded: num(p.f.pol_ded) || 0, expiry: p.f.pol_expiry || '', umb, group: p.f.pol_group === 'グループで共有', scope: umb ? p.f.pol_scope || '全リスク（地震を除く）' : '' });
     }
     return out;
   }
+  RR.policiesFor = policiesFor;
+  const uniqPols = (a) => { const seen = {}; return a.filter((p) => (seen[p.id] ? false : (seen[p.id] = 1))); };
+  /* 1件の損害を、免責（自己負担）・個別保険・自己負担の帯・包括保険・上限超過に分ける */
   function applyIns(loss, pols, extraLimit) {
-    let rem = loss, rec = 0; const lines = [];
-    pols.forEach((p, i) => {
-      const lim = p.limit + (i === 0 ? extraLimit || 0 : 0);
-      const pay = Math.max(0, Math.min(rem, lim) - p.ded); rec += pay; rem -= pay;
-      lines.push(`${p.id} ${p.type}：支払限度額 ${M(lim)}、免責金額 ${M(p.ded)} → 見込み ${M(pay)}`);
-    });
-    return { recover: rec, uninsured: Math.max(0, loss - rec), lines };
+    const x = Math.max(0, loss); const lines = []; const seg = { ded: 0, prim: 0, gap: 0, umb: 0, over: 0 };
+    let prim = pols.filter((p) => !p.umb).map((p) => Object.assign({}, p)); const umb = pols.filter((p) => p.umb).sort((a, b) => a.ded - b.ded);
+    if (extraLimit) { if (prim.length) prim[0].limit += extraLimit; else prim = [{ id: '提案', type: '提案による補償', limit: extraLimit, ded: 0 }]; }
+    let cur = 0;
+    if (prim.length) {
+      const d = prim[0].ded, Ls = prim.reduce((a, p) => a + p.limit, 0);
+      seg.ded = Math.min(x, d); seg.prim = Math.max(0, Math.min(x, Ls) - d); cur = Math.max(Ls, d);
+      prim.forEach((p, i) => lines.push(`${p.id} ${p.type}：支払限度額 ${M(p.limit)}${i === 0 ? '、免責金額 ' + M(p.ded) : ''}`));
+      lines.push(`個別保険の見込み ${M(seg.prim)}（免責 ${M(seg.ded)} は自己負担）`);
+    }
+    for (const u of umb) {
+      const att = Math.max(u.ded, cur); const g = Math.max(0, Math.min(x, att) - cur); seg.gap += g;
+      const pay = Math.max(0, Math.min(x - att, u.limit)); seg.umb += pay;
+      lines.push(`${u.id} ${u.type}（${u.scope}${u.group ? '・グループで共有' : ''}）：${M(att)}を超えた部分を、支払限度額 ${M(u.limit)} まで → 見込み ${M(pay)}${g > 0 ? `。${prim.length ? '個別保険の限度額から' : ''}包括の免責 ${M(u.ded)} までの ${M(g)} は自己負担` : ''}`);
+      cur = att + u.limit;
+    }
+    seg.over = Math.max(0, x - seg.ded - seg.prim - seg.gap - seg.umb);
+    if (seg.over > 0 && (prim.length || umb.length)) lines.push(`支払限度額を超える ${M(seg.over)} は自己負担`);
+    const recover = seg.prim + seg.umb;
+    return { recover, uninsured: Math.max(0, x - recover), lines, seg };
   }
+  RR.applyIns = applyIns;
+
+  /* ---------- 頻度：何年に1度 ⇔ 等級 ---------- */
+  function periodToFreq(T) {
+    const y = RR.c('freq_years', '境界'); /* [100,30,10,3] */ const pts = [[y[0] * 3, 1], [y[0], 1.5], [y[1], 2.5], [y[2], 3.5], [y[3], 4.5], [Math.max(0.5, y[3] / 3), 5]];
+    if (T >= pts[0][0]) return 1; if (T <= pts[pts.length - 1][0]) return 5;
+    for (let i = 0; i < pts.length - 1; i++) { const [a, ga] = pts[i], [b, gb] = pts[i + 1]; if (T <= a && T >= b) return ga + ((Math.log(a) - Math.log(T)) / (Math.log(a) - Math.log(b))) * (gb - ga); }
+    return 3;
+  }
+  function freqToPeriod(f) { const r = RR.c('freq_rep_years', '年'); const g = RR.clamp(f, 1, 5); const i = Math.min(3, Math.floor(g - 1)); const t = g - 1 - i; return Math.exp(Math.log(r[i]) * (1 - t) + Math.log(r[i + 1]) * t); }
+  RR.periodToFreq = periodToFreq; RR.freqToPeriod = freqToPeriod;
+  RR.periodText = (T) => (T >= 1.5 ? `${T >= 10 ? RR.n0(T) : RR.n1(T).replace(/\.0$/, '')}年に1度` : T >= 0.95 ? '毎年' : `年に${RR.n0(1 / T)}回`);
 
   /* ---------- 全体の計算 ---------- */
   RR.compute = function () {
@@ -252,32 +330,54 @@
     const net = RR.num('co_netassets'), retention = RR.num('co_retention');
     const items = []; const siteMap = {};
     const prepRows = RR.rows('prep'); const props = RR.rows('proposal').filter((p) => !['完了', '見送り'].includes(p.f.pr_status));
-    const allProps = RR.rows('proposal');
-    function finish(it, risk, raw, rawNoAlt, fx, siteIds) {
+    const allProps = RR.rows('proposal'); const assumes = RR.rows('assume');
+    const W = RR.c('level_weights', '比');
+    const findAssume = (risk, siteId, isTarget) => assumes.find((a) => a.f.as_risk === risk.name && siteId && a.f.as_site === siteId) || ((risk.scope !== 'site' || isTarget) ? assumes.find((a) => a.f.as_risk === risk.name && !a.f.as_site) : null);
+    function finish(it, risk, raw, rawNoAlt, fx, siteIds, ov) {
       it.id = risk.id; it.domain = risk.domain; it.scope = risk.scope; it.scenario = risk.scenario; it.measures = risk.measures || [];
-      it.loss = raw.loss.map((x) => Math.max(0, x)); it.lossA = (rawNoAlt || raw).loss.map((x) => Math.max(0, x)); it.basis = raw.basis;
+      it.loss = raw.loss.map((x) => Math.max(0, x)); it.lossA = (rawNoAlt || raw).loss.map((x) => Math.max(0, x)); it.basis = raw.basis.map((b) => b.slice());
+      it.calcLoss = it.loss.slice();
       /* 頻度 */
       const base = raw.freq !== null && raw.freq !== undefined ? raw.freq : risk.baseFreq || 2;
       it.freqA = RR.clamp(base + fx.freq, 1, 5);
       it.freqBasis = [raw.freqNote ? raw.freqNote : `基準 ${base}（リスク辞書）`].concat(fx.notes.filter((n) => n.includes('頻度')));
       it.sevNotes = fx.notes.filter((n) => n.includes('損害'));
+      /* 担当者の想定（何年に1度、現実的・最大の損害）で上書き */
+      it.assume = null;
+      if (ov) {
+        const f = ov.f, r = num(f.as_real), m = num(f.as_max), T = num(f.as_period);
+        it.assume = { rec: ov, T, real: r, max: m, bodily: f.as_bodily || '', ready: f.as_ready || '', owner: f.as_owner || '', actions: f.as_actions || '' };
+        if (r !== null || m !== null) {
+          let l = it.loss.slice();
+          if (r !== null && m !== null) l = [r, r > 0 ? Math.sqrt(r * Math.max(m, r)) : m / 2, Math.max(m, r)];
+          else if (r !== null) { l[0] = r; l[1] = Math.max(l[1], r); l[2] = Math.max(l[2], l[1]); }
+          else { l[2] = m; l[1] = Math.min(l[1], m); l[0] = Math.min(l[0], l[1]); }
+          it.lossA = it.lossA.map((a, i) => (it.loss[i] > 0 ? (a * l[i]) / it.loss[i] : l[i]));
+          const note = `担当者の想定（ヒアリング）：${r !== null ? '現実的な損害 ' + M(r) : ''}${r !== null && m !== null ? '、' : ''}${m !== null ? '最大の損害 ' + M(m) : ''}。算式による試算は ${M(it.loss[0])}／${M(it.loss[1])}／${M(it.loss[2])}`;
+          it.loss = l; it.basis = it.basis.map((b, i) => [note, `この水準の損害額 ${M(l[i])}`].concat(b.map((x) => '（参考：算式）' + x)));
+        }
+        if (T !== null && T > 0) { it.freqA = RR.clamp(periodToFreq(T), 1, 5); it.freqBasis = [`担当者の想定：${RR.periodText(T)}程度（等級 ${RR.n1(it.freqA)}）`]; }
+      }
       /* 備え */
       const pr = prepRows.find((p) => p.f.prep_risk === risk.name && it.siteId && p.f.prep_site === it.siteId) || prepRows.find((p) => p.f.prep_risk === risk.name && !p.f.prep_site);
       it.prep = pr ? { prevent: RR.lvl(pr.f.prep_prevent), alt: RR.lvl(pr.f.prep_alt), recover: RR.lvl(pr.f.prep_recover), insure: RR.lvl(pr.f.prep_insure), memo: pr.f.prep_memo || '', rec: pr } : { prevent: null, alt: null, recover: null, insure: null, memo: '', rec: null };
-      const credit = it.prep.prevent ? RR.c('prevent_credit', String(it.prep.prevent), 0) : 0;
+      const credit = it.prep.prevent && !(it.assume && it.assume.T) ? RR.c('prevent_credit', String(it.prep.prevent), 0) : 0;
       it.freqB = RR.clamp(it.freqA + credit, 1, 5);
       if (credit) it.freqBasis.push(`予防の段階 ${it.prep.prevent}：${credit}（現状の評価に反映）`);
+      it.T = it.assume && it.assume.T ? it.assume.T : freqToPeriod(it.freqB);
       /* 保険 */
-      it.policies = raw.localIns ? [] : policiesFor(risk, siteIds || (it.siteId ? [it.siteId] : null));
-      it.ins = it.loss.map((x) => applyIns(x, it.policies));
-      if (raw.localIns !== undefined) { it.ins = it.loss.map((x) => { const p = policiesFor(risk, null); const a = applyIns(x * (1 - raw.localIns), p); return { recover: x * raw.localIns + a.recover, uninsured: a.uninsured, lines: [`現地の保険で賄える見込み ${RR.n0(raw.localIns * 100)}%（係数表）：${M(x * raw.localIns)}`].concat(a.lines) }; }); it.policies = policiesFor(risk, null); }
+      it.policies = uniqPols(policiesFor(risk, siteIds || (it.siteId ? [it.siteId] : null)));
+      if (raw.localIns !== undefined) {
+        const li = raw.localIns; it.ins = it.loss.map((x) => { const a = applyIns(x * (1 - li), it.policies); a.seg.prim += x * li; a.recover += x * li; a.lines.unshift(`現地の保険で賄える見込み ${RR.n0(li * 100)}%（係数表）：${M(x * li)}`); return a; });
+      } else it.ins = it.loss.map((x) => applyIns(x, it.policies));
       it.uninsured = it.ins.map((x) => x.uninsured);
+      it.eal = it.loss.reduce((a, x, i) => a + x * W[i], 0) / it.T; it.ealUn = it.uninsured.reduce((a, x, i) => a + x * W[i], 0) / it.T;
       /* 提案 */
       it.proposals = allProps.filter((p) => p.f.pr_risk === risk.name && (!p.f.pr_site || p.f.pr_site === it.siteId || (siteIds || []).includes(p.f.pr_site)));
       const act = it.proposals.filter((p) => props.includes(p));
       let k = 1, df = 0, addLim = 0; act.forEach((p) => { k *= 1 - (num(p.f.pr_eff_loss) || 0) / 100; df += num(p.f.pr_eff_freq) || 0; addLim += num(p.f.pr_eff_limit) || 0; });
       it.lossC = it.loss.map((x) => x * k);
-      it.uninsuredC = it.lossC.map((x) => (raw.localIns !== undefined ? applyIns(x * (1 - raw.localIns), it.policies, addLim).uninsured : it.policies.length || addLim ? applyIns(x, it.policies.length ? it.policies : [{ id: '新規', type: '提案による補償', limit: 0, ded: 0 }], addLim).uninsured : x));
+      it.uninsuredC = it.lossC.map((x) => (raw.localIns !== undefined ? applyIns(x * (1 - raw.localIns), it.policies, addLim).uninsured : applyIns(x, it.policies, addLim).uninsured));
       it.freqC = RR.clamp(it.freqB - df, 1, 5);
       it.hasPlan = act.length > 0;
       /* 等級 */
@@ -291,10 +391,10 @@
       it.score = (L) => impactScore(it.uninsured[L], net).g * freqGrade(it.freqB);
       it.gap = retention > 0 && it.loss[2] >= retention * RR.c('gap', '損害が自己負担できる額のこの倍率以上', 0) && (it.prep.alt || 1) <= RR.c('gap', '代替手段の段階がこの値以下', 0);
       /* 未確認の入力 */
-      it.unconfirmed = [];
+      it.unconfirmed = (raw.unconf || []).slice();
       for (const q of RR.qs) {
         if (!(q.risks || []).includes(risk.id) && !(q.fx || []).some((f) => f.r === risk.id)) continue;
-        const L = RR.layers[q.layer];
+        const L = RR.layers[q.layer]; if (L.appOnly) continue;
         if (L.kind === 'items') { if (RR.isUnconfirmed(RR.provOf(q))) it.unconfirmed.push(q.label); }
         else {
           let recs = RR.rows(q.layer); const ids = siteIds || (it.siteId ? [it.siteId] : null);
@@ -303,26 +403,35 @@
           if (recs.some((r) => RR.isUnconfirmed(RR.provOf(q, r)))) it.unconfirmed.push(q.label);
         }
       }
+      it.unconfirmed = [...new Set(it.unconfirmed)];
       items.push(it); return it;
     }
     const posOf = (f) => freqPos(f);
-    /* 拠点 */
+    /* 拠点：まず全拠点の試算をそろえ、拠点を指定しない想定は損害が最大の拠点に当てる */
+    const siteRisks = RR.risks.filter((r) => r.scope === 'site' && r.id !== 'bi'); const pend = [];
     for (const s of RR.rows('site')) {
-      const c = siteCtx(s); const sm = (siteMap[s.id] = { id: s.id, name: s.f.site_name || s.id, ctx: c, perils: {}, V: c.V });
-      let maxF = 1;
-      for (const risk of RR.risks.filter((r) => r.scope === 'site' && r.id !== 'bi')) {
+      const c = siteCtx(s); siteMap[s.id] = { id: s.id, name: s.f.site_name || s.id, ctx: c, perils: {}, V: c.V };
+      for (const risk of siteRisks) {
         const fn = F[risk.formula.type]; const fx = fxFor(risk.id, s.id); let raw;
         if (fn) raw = fn(c, fx); else if (G[risk.formula.type]) raw = G[risk.formula.type](risk, fx); else continue;
         if (!raw || !(raw.loss[2] > 0)) continue;
-        if (c.assume.length && (risk.id === 'fire' || risk.id === 'quake')) raw.basis = raw.basis.map((b) => b.concat(c.assume));
-        const it = finish({ key: risk.id + ':' + s.id, siteId: s.id, name: risk.name, label: `${risk.name}｜${sm.name}`, short: risk.name.replace(/（.*）/, '') }, risk, raw, null, fx);
-        sm.perils[risk.id] = it; if (['fire', 'flood', 'quake'].includes(risk.id)) maxF = Math.max(maxF, it.freqA);
+        if (c.assume.length && (risk.id === 'fire' || risk.id === 'quake' || risk.id === 'wind')) raw.basis = raw.basis.map((b) => b.concat(c.assume));
+        pend.push({ s, c, risk, raw, fx });
       }
-      const bi = RR.riskById.bi;
-      if (bi) {
-        const fx = fxFor('bi', s.id); const raw = F.bi(c, fx, false), rawA = F.bi(c, fx, true);
-        if (raw.loss[2] > 0 || rawA.loss[2] > 0) { raw.freq = maxF; raw.freqNote = `この拠点の火災・水災・地震のうち最も高い頻度 ${maxF} を引用`; sm.perils.bi = finish({ key: 'bi:' + s.id, siteId: s.id, name: bi.name, label: `事業中断｜${sm.name}`, short: '事業中断' }, bi, raw, rawA, fx); }
-      }
+    }
+    const target = {}; for (const e of pend) { const t = target[e.risk.id]; if (!t || e.raw.loss[1] > t.raw.loss[1]) target[e.risk.id] = e; }
+    const maxF = {};
+    for (const e of pend) {
+      const sm = siteMap[e.s.id]; const ov = findAssume(e.risk, e.s.id, target[e.risk.id] === e);
+      const it = finish({ key: e.risk.id + ':' + e.s.id, siteId: e.s.id, name: e.risk.name, label: `${e.risk.name}｜${sm.name}`, short: e.risk.name.replace(/（.*）/, '') }, e.risk, e.raw, null, e.fx, null, ov);
+      sm.perils[e.risk.id] = it; if (['fire', 'flood', 'quake', 'wind', 'lightning'].includes(e.risk.id)) maxF[e.s.id] = Math.max(maxF[e.s.id] || 1, it.freqA);
+    }
+    const bi = RR.riskById.bi;
+    if (bi) {
+      const bp = [];
+      for (const sid in siteMap) { const sm = siteMap[sid]; const fx = fxFor('bi', sid); const raw = F.bi(sm.ctx, fx, false), rawA = F.bi(sm.ctx, fx, true); if (raw.loss[2] > 0 || rawA.loss[2] > 0) { raw.freq = maxF[sid] || 1; raw.freqNote = `この拠点の火災・水災・地震・風災・落雷のうち最も高い頻度 ${RR.n1(raw.freq)} を引用`; bp.push({ sm, raw, rawA, fx }); } }
+      let tb = null; for (const e of bp) if (!tb || e.raw.loss[1] > tb.raw.loss[1]) tb = e;
+      for (const e of bp) e.sm.perils.bi = finish({ key: 'bi:' + e.sm.id, siteId: e.sm.id, name: bi.name, label: `事業中断｜${e.sm.name}`, short: '事業中断' }, bi, e.raw, e.rawA, e.fx, null, findAssume(bi, e.sm.id, e === tb));
     }
     /* 集積 */
     function accum(riskId, field, perilId, labelOf) {
@@ -331,19 +440,20 @@
       for (const sid in siteMap) { const key = String(siteMap[sid].ctx.hz[field] || '').trim(); if (key && siteMap[sid].perils[perilId]) (groups[key] = groups[key] || []).push(siteMap[sid]); }
       for (const key in groups) {
         const ms = groups[key]; if (ms.length < 2) continue;
-        const mk = (useA) => { const loss = [0, 0, 0], basis = [[], [], []]; for (let L = 0; L < 3; L++) { for (const m of ms) { const a = m.perils[perilId].loss[L], b = m.perils.bi ? (useA ? m.perils.bi.lossA[L] : m.perils.bi.loss[L]) : 0; loss[L] += a + b; basis[L].push(`${m.name}：${RR.riskById[perilId].name} ${M(a)} ＋ 事業中断 ${M(b)}`); } basis[L].push(`合計 ${M(loss[L])}（${ms.length}拠点が同時に被災）`); } return { loss, basis }; };
+        const mk = (useA) => { const loss = [0, 0, 0], basis = [[], [], []]; for (let L = 0; L < 3; L++) { for (const m of ms) { const a = useA ? m.perils[perilId].lossA[L] : m.perils[perilId].loss[L], b = m.perils.bi ? (useA ? m.perils.bi.lossA[L] : m.perils.bi.loss[L]) : 0; loss[L] += a + b; basis[L].push(`${m.name}：${RR.riskById[perilId].name} ${M(a)} ＋ 事業中断 ${M(b)}`); } basis[L].push(`合計 ${M(loss[L])}（${ms.length}拠点が同時に被災）`); } return { loss, basis }; };
         const raw = mk(false), rawA = mk(true); raw.freq = Math.min(...ms.map((m) => m.perils[perilId].freqA)); raw.freqNote = `対象拠点の${RR.riskById[perilId].name}の頻度のうち最も低い値`;
-        const it = finish({ key: riskId + ':' + key, siteId: null, members: ms.map((m) => m.id), name: risk.name, label: `${labelOf}（${key}・${ms.length}拠点）`, short: `${key} 同時被災` }, risk, raw, rawA, { freq: 0, sev: 1, notes: [] }, ms.map((m) => m.id));
-        /* 提案後：構成拠点の提案後の損害を合算し、保険は1回だけ当てはめる */
+        const it = finish({ key: riskId + ':' + key, siteId: null, members: ms.map((m) => m.id), name: risk.name, label: `${labelOf}（${key}・${ms.length}拠点）`, short: `${key} 同時被災` }, risk, raw, rawA, fxFor(riskId, null), ms.map((m) => m.id), findAssume(risk, null, true));
         const peril = RR.riskById[perilId], biR = RR.riskById.bi;
         it.lossC = [0, 1, 2].map((L) => ms.reduce((a, m) => a + m.perils[perilId].lossC[L] + (m.perils.bi ? m.perils.bi.lossC[L] : 0), 0));
+        if (it.assume && (it.assume.real !== null || it.assume.max !== null)) it.lossC = it.loss.map((x, L) => x * (raw.loss[L] > 0 ? it.lossC[L] / raw.loss[L] : 1));
         it.proposals = allProps.filter((p) => p.f.pr_risk === risk.name || ((p.f.pr_risk === peril.name || (biR && p.f.pr_risk === biR.name)) && (!p.f.pr_site || it.members.includes(p.f.pr_site))));
         const act = it.proposals.filter((p) => props.includes(p)); it.hasPlan = act.length > 0;
         const extra = act.filter((p) => !p.f.pr_site).reduce((a, p) => a + (num(p.f.pr_eff_limit) || 0), 0);
-        /* 水災は利益保険も合算する（原因事故が補償対象である場合）。地震は地震の証券のみ */
-        if (riskId === 'acc_flood' && biR) it.policies = it.policies.concat(policiesFor(biR, ms.map((m) => m.id)));
+        /* 水災は利益保険も合算する（原因事故が補償対象である場合）。地震は地震の証券と包括のみ */
+        if (riskId === 'acc_flood' && biR) it.policies = uniqPols(it.policies.concat(policiesFor(biR, ms.map((m) => m.id))));
         it.ins = it.loss.map((x) => applyIns(x, it.policies)); it.uninsured = it.ins.map((x) => x.uninsured);
-        it.uninsuredC = it.lossC.map((x) => applyIns(x, it.policies.length ? it.policies : [{ id: '新規', type: '提案による補償', limit: 0, ded: 0 }], extra).uninsured);
+        it.uninsuredC = it.lossC.map((x) => applyIns(x, it.policies, extra).uninsured);
+        it.ealUn = it.uninsured.reduce((a, x, i) => a + x * W[i], 0) / it.T;
       }
     }
     accum('acc_flood', 'hz_system', 'flood', '同一水系の同時被災');
@@ -351,18 +461,20 @@
     /* 全社 */
     for (const risk of RR.risks.filter((r) => r.scope === 'company')) {
       const fn = G[risk.formula.type]; if (!fn) continue; const fx = fxFor(risk.id, null);
-      const raw = fn(risk, fx, false); if (!raw || !(raw.loss[2] > 0)) continue;
-      const rawA = ['supplier', 'cyberStop'].includes(risk.formula.type) ? fn(risk, fx, true) : null;
-      finish({ key: risk.id, siteId: null, name: risk.name, label: risk.name + (raw.sub ? `｜${raw.sub}` : ''), short: risk.name }, risk, raw, rawA, fx);
+      const raw = fn(risk, fx, false); const ov = findAssume(risk, null, true);
+      if ((!raw || !(raw.loss[2] > 0)) && !(ov && (num(ov.f.as_real) !== null || num(ov.f.as_max) !== null))) continue;
+      const r0 = raw && raw.loss[2] > 0 ? raw : { loss: [0, 0, 0], basis: [['算式で試算できる回答がありません'], ['算式で試算できる回答がありません'], ['算式で試算できる回答がありません']], freq: null };
+      const rawA = raw && ['supplier', 'cyberStop'].includes(risk.formula.type) ? fn(risk, fx, true) : null;
+      finish({ key: risk.id, siteId: null, name: risk.name, label: risk.name + (r0.sub ? `｜${r0.sub}` : ''), short: risk.name }, risk, r0, rawA, fx, null, ov);
     }
     /* 海外 */
-    const ov = RR.riskById.ovs_asset;
-    if (ov && RR.val('ov_has') !== 'なし') for (const o of RR.rows('overseas')) {
+    const ovr = RR.riskById.ovs_asset;
+    if (ovr && RR.val('ov_has') !== 'なし') for (const o of RR.rows('overseas')) {
       const fx = fxFor('ovs_asset', null); const cr = RR.hasRow('ovs_rates', o.f.ovs_country_risk) ? o.f.ovs_country_risk : '中'; const a = num(o.f.ovs_assets) || 0;
       const raw = lv3((L) => { const r = RR.c('ovs_rates', cr, L), sev = L < 2 ? fx.sev : 1; const x = Math.min(a, a * r * sev); return [x, [`${o.f.ovs_name}（${o.f.ovs_country}）：資産 ${M(a)} × 国のリスク区分「${cr}」${r}${sev !== 1 ? ' × ' + Math.round(sev * 100) / 100 : ''} ＝ ${M(x)}`]]; });
       if (!(raw.loss[2] > 0)) continue;
       raw.localIns = RR.hasRow('ovs_ins', o.f.ovs_local_ins) ? RR.c('ovs_ins', o.f.ovs_local_ins, 0) : 0;
-      const it = finish({ key: 'ovs_asset:' + o.id, siteId: null, ovsId: o.id, name: ov.name, label: `${ov.name}｜${o.f.ovs_name}`, short: ov.name }, ov, raw, null, fx);
+      const it = finish({ key: 'ovs_asset:' + o.id, siteId: null, ovsId: o.id, name: ovr.name, label: `${ovr.name}｜${o.f.ovs_name}`, short: ovr.name }, ovr, raw, null, fx);
       it.unconfirmed = RR.qsOf('overseas').filter((q) => (q.risks || []).includes('ovs_asset') && RR.isUnconfirmed(RR.provOf(q, o))).map((q) => q.label);
     }
     const L = RR.case.settings.level;
@@ -385,6 +497,80 @@
     return RR.result;
   };
   RR.freqPos = freqPos; RR.freqGrade = freqGrade;
+
+  /* ---------- 3つの整理：リスク把握・包括保険・個別保険 ---------- */
+  RR.three = function () {
+    const R = RR.compute(), L = R.level; const out = {};
+    const pols = RR.rows('policy').map((p) => { const pt = RR.policyTypes.find((t) => t.label === p.f.pol_type); return { rec: p, pt, umb: isUmb(pt, p), active: active(p) }; });
+    out.risk = { count: R.items.length, head: R.headline.length, top: R.items.slice(0, 3), totalLoss: R.headline.reduce((a, i) => a + i.loss[L], 0), totalUn: R.headline.reduce((a, i) => a + i.uninsured[L], 0), eal: R.headline.reduce((a, i) => a + i.eal, 0), ealUn: R.headline.reduce((a, i) => a + i.ealUn, 0) };
+    out.umbrella = pols.filter((x) => x.umb).map((x) => {
+      const p = x.rec; const covered = R.headline.filter((i) => i.policies.some((q) => q.id === p.id));
+      const pay = covered.reduce((a, i) => a + i.ins[L].seg.umb, 0); const gapSum = covered.reduce((a, i) => a + i.ins[L].seg.gap, 0);
+      return { rec: p, active: x.active, limit: num(p.f.pol_limit) || 0, ded: num(p.f.pol_ded) || 0, scope: p.f.pol_scope || '全リスク（地震を除く）', group: p.f.pol_group === 'グループで共有', premium: num(p.f.pol_premium), covered, pay, gapSum, reached: covered.filter((i) => i.ins[L].seg.umb > 0) };
+    });
+    out.indiv = pols.filter((x) => !x.umb);
+    out.joined = out.indiv.filter((x) => x.active); out.notJoined = out.indiv.filter((x) => !x.active);
+    out.premium = pols.filter((x) => x.active).reduce((a, x) => a + (num(x.rec.f.pol_premium) || 0), 0);
+    out.uncovered = R.headline.filter((i) => !i.policies.length && i.loss[L] > 0);
+    out.gapBand = R.headline.filter((i) => i.ins[L].seg.gap > 0);
+    out.overLimit = R.headline.filter((i) => i.ins[L].seg.over > 0 && i.policies.length);
+    out.retained = R.headline.reduce((a, i) => a + i.ins[L].seg.ded + i.ins[L].seg.gap, 0);
+    return out;
+  };
+
+  /* ---------- 免責の見直し：保険料と自己負担の比較 ---------- */
+  function discount(ded, limit) { if (!(limit > 0)) return 0; const r = (ded / limit) * 100; const keys = Object.keys(RR.coef.ded_discount.rows); const th = [0.01, 0.05, 0.2, 1, 5, 10]; let i = 0; while (i < th.length && r >= th[i]) i++; return RR.c('ded_discount', keys[i], 0) / 100; }
+  RR.dedSim = function () {
+    const R = RR.compute(); const W = RR.c('level_weights', '比'); const out = [];
+    for (const p of RR.rows('policy')) {
+      if (!active(p)) continue; const pt = RR.policyTypes.find((t) => t.label === p.f.pol_type); const umb = isUmb(pt, p);
+      const limit = num(p.f.pol_limit) || 0; const ded0 = num(p.f.pol_ded) || 0; const prem0 = num(p.f.pol_premium);
+      const opts = RR.rows('dedopt').filter((o) => String(o.f.do_pol || '').trim() === p.id);
+      if (!opts.length) continue;
+      const its = R.headline.filter((i) => i.policies.some((q) => q.id === p.id));
+      const n = num(p.f.pol_small_n) || 0, avg = num(p.f.pol_small_avg) || 0;
+      const retained = (ded) => {
+        let small = umb ? 0 : n * Math.min(avg, ded); let big = 0;
+        for (const it of its) for (let L = 0; L < 3; L++) {
+          const x = it.loss[L]; const pf = W[L] / it.T;
+          if (umb) { const prim = it.policies.filter((q) => !q.umb); const Ls = prim.reduce((a, q) => a + q.limit, 0); const d0 = prim.length ? Math.max(Ls, prim[0].ded) : 0; big += pf * Math.max(0, Math.min(x, Math.max(ded, d0)) - d0); }
+          else big += pf * Math.min(x, ded);
+        }
+        return { small, big, total: small + big };
+      };
+      const mk = (label, ded, quote, note, rec) => {
+        const est = quote === null || quote === undefined; let prem = est ? (prem0 !== null ? (prem0 * (1 - discount(ded, limit))) / (1 - discount(ded0, limit)) : null) : quote;
+        const r = retained(ded); const maxRet = umb ? ded : ded + (its.some((i) => i.ins[2].seg.gap > 0) ? 0 : 0);
+        return { label, ded, prem, est: est && ded !== ded0, ret: r, total: prem === null ? null : prem + r.total, maxRet, ok: !(R.retention > 0) || maxRet <= R.retention, note: note || '', rec };
+      };
+      const base = mk('現状', ded0, prem0, '現在の契約');
+      const rows = [base].concat(opts.map((o) => mk(`案 ${o.id}`, num(o.f.do_ded) || 0, num(o.f.do_premium), o.f.do_note, o)));
+      rows.forEach((r) => { r.saving = base.prem !== null && r.prem !== null ? base.prem - r.prem : null; r.retInc = r.ret.total - base.ret.total; r.netGain = r.saving === null ? null : r.saving - r.retInc; });
+      const best = rows.slice(1).filter((r) => r.ok && r.netGain !== null && r.netGain > 0).sort((a, b) => b.netGain - a.netGain)[0] || null;
+      out.push({ pol: p, type: p.f.pol_type, umb, limit, smallN: n, smallAvg: avg, risks: its, rows, best });
+    }
+    return out;
+  };
+
+  /* ---------- サイバー対策の到達度 ---------- */
+  RR.cyberScore = function () {
+    const v = (id) => RR.val(id); const sys = RR.rows('system');
+    const offline = sys.length ? sys.some((s) => s.f.sys_backup === '隔離保管・復元訓練済') && !sys.some((s) => s.f.sys_backup === 'なし') : v('cy_offline') === '隔離保管・復元訓練済';
+    const items = [
+      ['多要素認証を全社で導入', v('cy_mfa') === '全社', v('cy_mfa')],
+      ['更新プログラムを定期的に適用', v('cy_patch') === '定期', v('cy_patch')],
+      ['侵入の検知と監視', v('cy_edr') === '導入・監視あり', v('cy_edr')],
+      ['不審メール訓練', v('cy_training') === '実施', v('cy_training')],
+      ['事故対応の手順と訓練', v('cy_ir') === 'あり・訓練済', v('cy_ir')],
+      ['外部からの接続（VPN等）の管理', v('cy_remote') === '管理している', v('cy_remote')],
+      ['委託先のセキュリティ確認', v('cy_vendor') === '実施', v('cy_vendor')],
+      ['バックアップの隔離保管と復元訓練', offline, sys.length ? sys.map((s) => s.f.sys_backup || '未記入').join('／') : v('cy_offline')],
+      ['工場・設備の制御ネットワークの分離', ['分離している', '該当なし'].includes(v('cy_ot')), v('cy_ot')],
+    ].map(([label, ok, ans]) => ({ label, ok: !!ok, ans: ans === undefined || ans === '' ? '未回答' : ans }));
+    const ins = RR.rows('policy').some((p) => active(p) && p.f.pol_type === 'サイバー') ? 'あり' : RR.rows('policy').some((p) => active(p) && isUmb(RR.policyTypes.find((t) => t.label === p.f.pol_type), p) && inScope(scopeOf(p.f.pol_scope), RR.riskById.cyber_stop || { domain: 'cyber', id: 'cyber_stop' })) ? '包括で一部' : 'なし';
+    return { items, done: items.filter((x) => x.ok).length, total: items.length, ins };
+  };
+
 
   /* 結論の一文 */
   RR.headlineText = function () {

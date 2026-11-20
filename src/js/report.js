@@ -55,6 +55,7 @@
       out.push(`${E(RR.companyName(false))}について、${R.items.length}件のリスクを金額で評価しました。${E(H.main)}`);
       out.push(`上位は、${top.map((t) => `「${lab(t)}」（${E(RR.levelShort[L])}の損害 ${M(t.loss[L])}、保険で賄えない額 ${M(t.uninsured[L])}）`).join('、')}です。`);
       out.push(E(H.sub) + (RR.rows('proposal').length ? `改善提案は${RR.rows('proposal').length}件を台帳に載せています。` : ''));
+      { const T = RR.three(); const u = T.umbrella.filter((x) => x.active); const cs = RR.cyberScore(); out.push(`保険は、個別保険${T.joined.length}種目${u.length ? `と包括保険（支払限度額${M(u[0].limit)}、免責${M(u[0].ded)}）` : ''}で手当てされていますが、どの保険にも当てはまらないリスクが${T.uncovered.length}件あります。サイバー対策は${cs.total}項目中${cs.done}項目が済んでおり、サイバー保険は「${E(cs.ins)}」です。`); }
     } else if (ch.id === 'c2') {
       const c = R.conf; out.push(`対象は国内${RR.rows('site').length}拠点${RR.rows('overseas').length ? `と海外${RR.rows('overseas').length}拠点` : ''}です。回答${c.現地 + c.資料 + c.聞き取り + c.未確認}件の確認方法は、現地 ${c.現地}件、資料 ${c.資料}件、聞き取り ${c.聞き取り}件、未確認 ${c.未確認}件で、ほかに未記入が${c.未記入}件あります。`);
       out.push('損害額は、係数表と算式による試算です。係数の初期値は仮置きで、統計や約款にもとづく値ではありません。現地で確認していない項目は「未確認」と表示しています。');
@@ -71,6 +72,7 @@
       const bi = R.items.filter((i) => i.id === 'bi').sort((a, b) => b.loss[L] - a.loss[L]); if (bi.length) out.push(`拠点が止まった場合の損害は、${lab(bi[0])}が最大で${M(bi[0].loss[L])}（${E(RR.levelShort[L])}）です。代替手段を考慮しない場合は${M(bi[0].lossA[L])}になります。`);
       const na = RR.rows('line').filter((l) => !(Number(l.f.line_alt_ratio) > 0)); if (na.length) out.push(`代替手段のない工程が${na.length}件あります（${na.slice(0, 4).map((l) => E(RR.siteName(l.f.line_site) + '・' + l.f.line_name)).join('、')}${na.length > 4 ? ' ほか' : ''}）。`);
     } else if (ch.id === 'c13') {
+      if (RR.val('bcp_status')) out.push(`BCPは「${E(RR.val('bcp_status'))}」で、想定している事象は「${E(RR.val('bcp_scope') || '未記入')}」、最後に見直したのは${E(RR.val('bcp_review') || '（未記入）')}です。代替拠点・代替生産の取り決めは「${E(RR.val('bcp_altsite') || '未記入')}」です。`);
       const ps = RR.rows('prep'); const avg = (k) => { const v = ps.map((r) => RR.lvl(r.f[k])).filter(Boolean); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
       if (ps.length) out.push(`備えの4層の平均は、予防 ${RR.n1(avg('prep_prevent'))}、代替手段 ${RR.n1(avg('prep_alt'))}、復旧手順 ${RR.n1(avg('prep_recover'))}、保険 ${RR.n1(avg('prep_insure'))}です（4段階）。`);
       out.push(`損害が自己負担できる額を超え、代替手段が「考えたことがない」「検討はした」にとどまるリスクを、備えの空白として挙げています。`);
@@ -79,6 +81,21 @@
       out.push(`証券は${RR.rows('policy').length}件です。想定損害に対して保険で賄えない額が大きいのは、${un.map((i) => `「${lab(i)}」${M(i.uninsured[L])}`).join('、')}です。`);
       const none = R.headline.filter((i) => !i.policies.length && i.loss[L] > 0); if (none.length) out.push(`紐づく証券がないリスクが${none.length}件あります（${none.slice(0, 5).map(lab).join('、')}${none.length > 5 ? ' ほか' : ''}）。`);
       out.push('ここでの「賄える見込み」は、支払限度額と免責金額だけを当てはめた試算です。補償の可否は約款と保険会社の判断によります。');
+    } else if (ch.id === 'c_ins') {
+      const T = RR.three(); const u = T.umbrella.filter((x) => x.active);
+      out.push(`保険の手当てを、リスクの把握・包括保険・個別保険の3つに分けて整理しました。個別保険は${T.joined.length}種目に加入しており、年間保険料の合計は${M(T.premium)}です。`);
+      if (u.length) out.push(`包括保険（${u.map((x) => E(x.scope)).join('、')}）は、支払限度額${M(u[0].limit)}、免責金額${M(u[0].ded)}です。個別保険の支払限度額から包括の免責金額までの間は、どちらからも支払われない「自己負担の帯」になり、その合計は${M(u.reduce((a, x) => a + x.gapSum, 0))}です${u.some((x) => x.group) ? '。支払限度額はグループ会社と共有しているため、同じ年に他社で事故があると使える額が減ります' : ''}。`);
+      else out.push('包括保険はありません。個別保険の支払限度額を超えた部分は、すべて自己負担になります。');
+      if (T.uncovered.length) out.push(`どの保険にも当てはまらないリスクが${T.uncovered.length}件あります（${T.uncovered.slice(0, 5).map(lab).join('、')}${T.uncovered.length > 5 ? ' ほか' : ''}）。`);
+      out.push('ここでの保険の見込みは、支払限度額と免責金額だけを当てはめた試算です。補償の可否は約款と保険会社の判断によります。');
+    } else if (ch.id === 'c_ded') {
+      const sims = RR.dedSim(); if (!sims.length) out.push('免責の見直し案は、まだ登録されていません。');
+      for (const d of sims) { const b = d.best; out.push(b ? `${E(d.pol.id + ' ' + d.type)}では、${E(b.label)}（免責${M(b.ded)}）が最も有利で、保険料が年${M(b.saving)}下がる一方、自己負担の見込みは年${M(b.retInc)}増え、正味で年${M(b.netGain)}有利になる試算です${b.est ? '（保険料は目安）' : ''}。` : `${E(d.pol.id + ' ' + d.type)}では、検討した案のうち、現状より有利になるものはありませんでした。`); }
+    } else if (ch.id === 'c_scn') {
+      const d = RP.scenarioData().filter((x) => x.prim); const bod = d.filter((x) => (x.as && x.as.f.as_bodily === '想定される') || (!x.as && x.sc.bodily));
+      out.push(`主な事故${d.length}種類について、何年に1度程度起こるか、現実的な損害と最大の損害、保険の手当て、起きたときにしなければならないことを整理しました。`);
+      if (bod.length) out.push(`身体・財物に大きな損害を与えるおそれがあるのは、${bod.map((x) => E(x.sc.name)).join('、')}です。`);
+      const noReady = d.filter((x) => !x.as || x.as.f.as_ready === 'なし' || !x.as.f.as_ready); if (noReady.length) out.push(`対応手順が未整備または未記入の事故が${noReady.length}種類あります。`);
     } else if (ch.id === 'c15') {
       const ps = RR.rows('proposal'); const a = ps.filter((x) => x.f.pr_priority === 'A' && !['完了', '見送り'].includes(x.f.pr_status));
       out.push(`改善提案は${ps.length}件で、うち優先度Aで未完了のものが${a.length}件です。`);
@@ -147,10 +164,6 @@
   B.overseas_table = () => transposed('overseas', RR.rows('overseas'), { per: 4, cap: '海外拠点' });
   B.prep_legend = () => [`<div class="prep-lg">${RR.prepLevels.map((l, i) => `<span>${prepDot(i + 1)} ${E(l.replace(/^\d\s*/, ''))}</span>`).join('')}</div>`];
   B.prep_matrix = (ch, ctx) => { const R = RR.compute(); let rows = RR.rows('prep'); if (ctx.quick) rows = rows.filter((r) => !r.f.prep_site).slice().sort((x, y) => (RR.lvl(x.f.prep_alt) || 1) - (RR.lvl(y.f.prep_alt) || 1)).slice(0, 12); return [tbl([{ h: 'リスク' }, { h: '拠点', w: '14%' }, { h: '予防', cls: 'ctr', w: '7%' }, { h: '代替手段', cls: 'ctr', w: '9%' }, { h: '復旧手順', cls: 'ctr', w: '9%' }, { h: '保険', cls: 'ctr', w: '7%' }, { h: '具体的な内容', w: '30%' }], rows.map((r) => [E(r.f.prep_risk), E(r.f.prep_site ? RR.siteName(r.f.prep_site) : '全社'), prepDot(RR.lvl(r.f.prep_prevent)), prepDot(RR.lvl(r.f.prep_alt)), prepDot(RR.lvl(r.f.prep_recover)), prepDot(RR.lvl(r.f.prep_insure)), E(r.f.prep_memo || '') + ((r.prov.row || {}).method === '未確認' ? ' ' + unc() : '')]), { cls: 'small', cap: '備えの棚卸し', empty: '備えの棚卸しは未回答です。未回答のリスクは、段階1として扱っています。' })]; };
-  B.policy_table = () => [h3('証券の一覧'), tbl([{ h: 'ID', w: '6%' }, { h: '種目' }, { h: '保険会社', w: '16%' }, { h: '支払限度額', cls: 'num', w: '12%' }, { h: '免責金額', cls: 'num', w: '10%' }, { h: '水災', w: '13%' }, { h: '対象拠点', w: '10%' }, { h: '満期', w: '11%' }], RR.rows('policy').map((x) => [E(x.id), E(x.f.pol_type), E(x.f.pol_insurer || ''), M(x.f.pol_limit), M(x.f.pol_ded || 0), x.f.pol_flood === 'あり' ? 'あり' + (x.f.pol_flood_limit !== undefined ? '（' + M(x.f.pol_flood_limit) + '）' : '') : E(x.f.pol_flood || '') || unc('未記入'), E(x.f.pol_sites || ''), E(x.f.pol_expiry || '')]), { cls: 'small', empty: '保険証券の記入はありません。すべてのリスクを保険なしとして試算しています。' })];
-  B.fig_insbars = (ch, ctx) => [fig('図4　損害と保険の対比図', RR.charts.insBars({ w: FW, max: ctx.quick ? 12 : 20 }))];
-  B.coverage_table = () => { const R = RR.compute(), L = R.level; return [h3('リスクと証券の対応'), tbl([{ h: 'リスク' }, { h: '紐づく証券', w: '26%' }, { h: '損害', cls: 'num', w: '11%' }, { h: '賄える見込み', cls: 'num', w: '12%' }, { h: '賄えない額', cls: 'num', w: '11%' }, { h: '最悪の場合', cls: 'num', w: '11%' }], R.headline.map((i) => [lab(i), i.policies.length ? E(i.policies.map((x) => x.id + ' ' + x.type).join('、')) : '<b>なし</b>', M(i.loss[L]), M(i.loss[L] - i.uninsured[L]), `<b>${M(i.uninsured[L])}</b>`, M(i.uninsured[2])]), { cls: 'small' }), note('賄えない額 ＝ 損害額 − 支払限度額 ＋ 免責金額（損害額が支払限度額を超える場合）。損害額が限度額以下の場合は免責金額。種目とリスクの対応はリスク辞書の定義によります。事業中断は、原因となる事故が補償の対象である場合に限られます。')]; };
-  B.deductible_note = () => { const R = RR.compute(); return [h3('免責金額の考え方'), p(`自己負担できる額は${M(R.retention)}とのご回答です。頻度が高く損害の小さい事故は、免責金額を上げて自己負担し、その分の保険料を、損害の大きいリスクの限度額に振り向ける考え方があります。具体的な条件は、保険会社の見積によります。`)]; };
   B.proposal_table = (ch, ctx) => { const R = RR.compute(), L = R.level; const ps = RR.rows('proposal').filter((x) => !ctx.quick || (x.f.pr_priority === 'A' && !['完了', '見送り'].includes(x.f.pr_status))).sort((a, b) => (a.f.pr_priority || 'Z').localeCompare(b.f.pr_priority || 'Z') || String(a.f.pr_due || '').localeCompare(String(b.f.pr_due || ''))); return [h3(ctx.quick ? '最初に着手する提案（優先度A）' : '提案の台帳'), tbl([{ h: 'ID', w: '6%' }, { h: '優先', cls: 'ctr', w: '6%' }, { h: '提案と内容' }, { h: '対象', w: '13%' }, { h: '費用感', w: '13%' }, { h: '期限', w: '10%' }, { h: '状況', w: '8%' }], ps.map((x) => { const eff = [x.f.pr_eff_loss ? '損害 −' + x.f.pr_eff_loss + '%' : '', x.f.pr_eff_freq ? '頻度 −' + x.f.pr_eff_freq + '段階' : '', x.f.pr_eff_limit ? '限度額 +' + M(x.f.pr_eff_limit) : ''].filter(Boolean).join('、'); return [E(x.id), `<b>${E(x.f.pr_priority || '')}</b>`, `<b>${E(x.f.pr_title)}</b><br>${E(x.f.pr_detail || '')}${eff ? `<br><span class="eff">効果の見込み：${E(eff)}（${E(x.f.pr_risk)}）</span>` : ''}`, E(x.f.pr_site ? RR.siteName(x.f.pr_site) : '全社'), E(x.f.pr_cost || '—'), E(x.f.pr_due || '—'), E(x.f.pr_status || '—')]; }), { cls: 'small', empty: '改善提案は未登録です。「提案台帳」画面で、回答から候補を起こせます。' })]; };
   B.roadmap = () => {
     const ps = RR.rows('proposal').filter((x) => x.f.pr_due && /^\d{4}/.test(x.f.pr_due) && !['完了', '見送り'].includes(x.f.pr_status)); if (!ps.length) return [];
@@ -162,8 +175,8 @@
   B.site_chapters = (ch, ctx) => {
     const R = RR.compute(), L = R.level; const out = [];
     RR.rows('site').forEach((s, idx) => {
-      const sm = R.siteMap[s.id]; const no = `${ch.no}.${idx + 1}`; const ps = Object.values(sm.perils).sort((a, b) => b.loss[L] - a.loss[L]); const worst = ps[0];
-      out.push({ html: `<div class="site-open kn" data-toc="${E(no + '　' + sm.name)}"><div class="so-no">${E(no)}</div><div class="so-main"><div class="so-name">${E(sm.name)}</div><div class="so-sub">${E(s.f.site_addr || '所在地未記入')}　｜　${E(s.f.site_use || '')}　｜　${E(s.id)}</div></div><div class="so-k"><span>拠点資産</span><b>${M(sm.V)}</b></div><div class="so-k"><span>最大の損害（${E(RR.levelShort[2])}）</span><b>${worst ? M(Math.max(...ps.map((x) => x.loss[2]))) : '—'}</b></div></div>`, newPage: true, head: `${ch.no} ${ch.title}｜${sm.name}` });
+      const sm = R.siteMap[s.id]; const no = `${ctx.no || ch.no}.${idx + 1}`; const ps = Object.values(sm.perils).sort((a, b) => b.loss[L] - a.loss[L]); const worst = ps[0];
+      out.push({ html: `<div class="site-open kn" data-toc="${E(no + '　' + sm.name)}"><div class="so-no">${E(no)}</div><div class="so-main"><div class="so-name">${E(sm.name)}</div><div class="so-sub">${E(s.f.site_addr || '所在地未記入')}　｜　${E(s.f.site_use || '')}　｜　${E(s.id)}</div></div><div class="so-k"><span>拠点資産</span><b>${M(sm.V)}</b></div><div class="so-k"><span>最大の損害（${E(RR.levelShort[2])}）</span><b>${worst ? M(Math.max(...ps.map((x) => x.loss[2]))) : '—'}</b></div></div>`, newPage: true, head: `${ctx.no || ch.no} ${ch.title}｜${sm.name}` });
       aiOrAuto('site:' + s.id, siteAuto(sm)).forEach((x) => out.push(x));
       out.push(h4(`${no}.1　概要`)); transposed('site', [s], { per: 1, cap: '拠点の概要', skip: ['site_name'] }).forEach((x) => out.push(x));
       out.push(h4(`${no}.2　自然災害`)); const hz = RR.rows('hazard').filter((h) => h.f.hz_site === s.id).slice(0, 1);
@@ -179,6 +192,7 @@
       out.push(h4(`${no}.7　写真と所見`)); const fd = RR.rowsOfSite('finding', s.id);
       if (fd.length) for (let i = 0; i < fd.length; i += 2) out.push(`<div class="fd-row">${fd.slice(i, i + 2).map((x) => `<div class="fd">${x.f.fd_photo ? `<div class="fd-ph"><img src="${x.f.fd_photo}" alt=""></div>` : ''}<div class="fd-b"><div class="fd-t"><span class="fdg fdg-${x.f.fd_grade === '要是正' ? 3 : x.f.fd_grade === '要改善' ? 2 : 1}">${E(x.f.fd_grade || '所見')}</span>${E(x.f.fd_title)}</div><div class="fd-x">${E(x.f.fd_text || '')}</div><div class="fd-m">${(x.prov.row || {}).method === '未確認' ? unc() : E((x.prov.row || {}).method || '')}　${E((x.prov.row || {}).date || '')}${x.f.fd_photo ? '' : '　写真は未登録'}</div></div></div>`).join('')}</div>`);
       else out.push(p(`この拠点の写真と所見は登録されていません。現地確認は ${unc()} です。`));
+      postBlocks(RP.postsAt('site:' + s.id)).forEach((x) => out.push(x));
       const u = [...new Set(ps.flatMap((i) => i.unconfirmed))]; if (u.length) out.push(`<div class="unc-box kn0"><b>この拠点で未確認・未記入の入力（${u.length}項目）</b>　${u.map(E).join('、')}</div>`);
     });
     return out;
@@ -192,6 +206,105 @@
   B.apx_glossary = () => [h3('F　用語'), tbl([{ h: '用語', w: '22%' }, { h: '説明' }], RR.chapters.glossary.map((g) => [`<b>${E(g[0])}</b>`, E(g[1])]), { cls: 'small' })];
   B.closing = (ch, ctx) => [`<div class="closing"><ol>${RR.chapters.closing.map((c) => `<li>${E(c)}</li>`).join('')}<li>${E(RR.raw.coefficients.notice)}</li>${ctx.quick ? '<li>この簡易版は、会社全体を7つの領域で見た概略です。拠点別・建物別の評価は網羅版で行います。</li>' : ''}</ol></div>`];
 
+  /* ---------- v2：写真と資料（ブログ形式） ---------- */
+  const postHtml = (m) => {
+    const f = m.f; const size = f.md_size === '大きく' ? 'lg' : f.md_size === '小さく（2列）' ? 'sm' : 'md';
+    return `<figure class="post post-${size}">${f.md_image ? `<div class="post-img"><img src="${f.md_image}" alt="${E(f.md_title || '')}"></div>` : ''}<figcaption><div class="post-k">${E(f.md_kind || '写真・資料')}${f.md_date ? '　' + E(f.md_date) : ''}</div><div class="post-t">${E(f.md_title || '（タイトル未記入）')}</div>${f.md_text ? `<div class="post-x">${E(f.md_text).replace(/\n/g, '<br>')}</div>` : ''}${f.md_source ? `<div class="post-s">出典・引用元：${E(f.md_source)}</div>` : ''}</figcaption></figure>`;
+  };
+  RP.postHtml = postHtml;
+  RP.postsAt = (place) => RR.rows('post').filter((m) => m.f.md_place === place);
+  function postBlocks(list) {
+    const out = []; let i = 0;
+    while (i < list.length) {
+      const m = list[i];
+      if (m.f.md_size === '小さく（2列）' && list[i + 1] && list[i + 1].f.md_size === '小さく（2列）') { out.push(`<div class="post-row">${postHtml(m)}${postHtml(list[i + 1])}</div>`); i += 2; continue; }
+      out.push(postHtml(m)); i++;
+    }
+    return out;
+  }
+  RP.postBlocks = postBlocks;
+  B.posts = (ch, ctx) => { let list = RP.postsAt('ch:' + ch.id); if (ctx.quick && ch.id === 'c3') list = list.concat(RR.rows('site').flatMap((s) => RP.postsAt('site:' + s.id))); return list.length ? [h3('写真と資料')].concat(postBlocks(list)) : []; };
+
+  /* ---------- 3つの整理 ---------- */
+  const polStatus = (typeLabel) => { const rows = RR.rows('policy').filter((p) => p.f.pol_type === typeLabel); if (!rows.length) return ''; return rows.map((p) => p.f.pol_status || '加入').join('・'); };
+  const policyTypeOf = (risk) => RR.policyTypes.filter((t) => !t.umbrella && (t.covers.includes(risk.id) || (risk.insurance || []).includes(t.id)));
+  const ret = (it, L) => it.ins[L].seg.ded + it.ins[L].seg.gap + it.ins[L].seg.over;
+  B.three_overview = (ch, ctx) => {
+    const T = RR.three(), R = RR.compute(), L = R.level; const u = T.umbrella.filter((x) => x.active);
+    const col = (no, title, body) => `<div class="three-c"><div class="three-n">${no}</div><div class="three-h">${E(title)}</div>${body}</div>`;
+    return [`<div class="three">${col('1', 'リスクの把握', `<p>${T.risk.count}件を評価。会社全体で見た主なリスクの損害は合計${M(T.risk.totalLoss)}（${E(RR.levelShort[L])}）、そのうち保険で賄えない額は${M(T.risk.totalUn)}です。</p><p>上位：${T.risk.top.map((i) => lab(i)).join('、')}</p>`)}${col('2', '包括保険', u.length ? u.map((x) => `<p>${E(x.rec.f.pol_type)}（${E(x.scope)}）：支払限度額${M(x.limit)}、免責${M(x.ded)}${x.group ? '、限度額はグループで共有' : ''}。包括で賄える見込みは合計${M(x.pay)}、包括の免責までの自己負担（帯）は合計${M(x.gapSum)}です。</p>`).join('') : '<p>包括保険（アンブレラ・グループ包括）はありません。高額の事故は、個別保険の支払限度額を超えた部分がすべて自己負担になります。</p>')}${col('3', '個別保険', `<p>加入 ${T.joined.length}種目、年間保険料の合計${M(T.premium)}。</p><p>${T.notJoined.length ? '未加入・検討中・不明：' + T.notJoined.map((x) => E(x.rec.f.pol_type) + '（' + E(x.rec.f.pol_status || '') + '）').join('、') : '未加入として記入された種目はありません。'}</p><p>保険の手当てがないリスク：${T.uncovered.length}件</p>`)}</div>`];
+  };
+  B.summary_three = (ch, ctx) => [h3('リスク把握・包括保険・個別保険の3つの整理')].concat(B.three_overview(ch, ctx));
+  B.fig_tower = (ch, ctx) => [fig('図　補償の積み上げ（免責・個別保険・自己負担の帯・包括保険）', RR.charts.tower({ w: FW, max: ctx.quick ? 12 : 17 }), '1本の帯が1つのリスクの損害額です。左から、個別保険の免責、個別保険で賄う部分、包括保険の免責までの自己負担（帯）、包括保険で賄う部分、どの保険でも手当てされない部分の順に並べています。')];
+  B.umbrella_table = () => {
+    const T = RR.three(), R = RR.compute(), L = R.level; if (!T.umbrella.length) return [h3('包括保険'), p('包括保険（アンブレラ・グループ包括）の記入はありません。グループ全体で契約している場合は、「12 保険プログラム」の種目に「包括（アンブレラ）」を選び、対象範囲・免責金額・支払限度額を記入してください。')];
+    const out = [h3('包括保険（アンブレラ・グループ包括）')];
+    for (const u of T.umbrella) {
+      out.push(tbl([{ h: '項目', w: '30%' }, { h: '内容' }], [['種目・保険会社', E(u.rec.id + ' ' + u.rec.f.pol_type + '　' + (u.rec.f.pol_insurer || ''))], ['加入状況', E(u.rec.f.pol_status || '加入')], ['対象範囲', E(u.scope)], ['免責金額（この額までは自己負担または個別保険）', `<b>${M(u.ded)}</b>`], ['支払限度額', `<b>${M(u.limit)}</b>${u.group ? '（グループ会社と共有。同じ年に他社で事故があると、使える額が減ります）' : ''}`], ['年間保険料', M(u.premium)], ['対象になるリスク', `${u.covered.length}件（うち、損害が包括の免責を超えて包括から支払われる見込みのもの ${u.reached.length}件）`], ['包括で賄える見込み（合計）', M(u.pay)], ['包括の免責までの自己負担（帯）の合計', `<b>${M(u.gapSum)}</b>`]], { cls: 'small', cap: '包括保険の内容' }));
+      out.push(tbl([{ h: 'リスク' }, { h: '損害', cls: 'num', w: '11%' }, { h: '個別保険', cls: 'num', w: '11%' }, { h: '自己負担の帯', cls: 'num', w: '13%' }, { h: '包括保険', cls: 'num', w: '11%' }, { h: '超過', cls: 'num', w: '10%' }], u.covered.slice().sort((a, b) => b.loss[L] - a.loss[L]).map((i) => { const g = i.ins[L].seg; return [lab(i), M(i.loss[L]), M(g.prim), g.gap > 0 ? `<b>${M(g.gap)}</b>` : '—', M(g.umb), g.over > 0 ? M(g.over) : '—']; }), { cls: 'small', cap: `包括の対象になるリスク（${RR.levelShort[L]}）` }));
+    }
+    out.push(note(E(RR.raw.risks.umbrellaNote || '')));
+    return out;
+  };
+  B.uncovered_table = () => {
+    const T = RR.three(), R = RR.compute(), L = R.level; const out = [h3('手当てのないリスクと、未加入の種目')];
+    out.push(tbl([{ h: 'リスク' }, { h: RR.levelShort[L], cls: 'num', w: '12%' }, { h: RR.levelShort[2], cls: 'num', w: '12%' }, { h: '何年に1度', w: '13%' }, { h: '対応しうる保険の種目', w: '28%' }], T.uncovered.map((i) => { const r = RR.riskById[i.id] || {}; return [lab(i), `<b>${M(i.loss[L])}</b>`, M(i.loss[2]), E(RR.periodText(i.T)), E(policyTypeOf(r).map((t) => t.label + (polStatus(t.label) ? '（' + polStatus(t.label) + '）' : '')).join('、') || '保険での手当ては難しい（自己負担・対策で備える）')]; }), { cls: 'small', cap: '個別保険・包括保険のどちらにも当てはまらないリスク', empty: 'すべてのリスクに、何らかの保険が当てはまっています。' }));
+    if (T.notJoined.length) out.push(tbl([{ h: '種目' }, { h: '状況', w: '14%' }, { h: '関係するリスク' }], T.notJoined.map((x) => { const rs = RR.risks.filter((r) => x.pt && (x.pt.covers.includes(r.id) || (r.insurance || []).includes(x.pt.id))); return [E(x.rec.f.pol_type), E(x.rec.f.pol_status || ''), E(rs.map((r) => r.name).join('、'))]; }), { cls: 'small', cap: '未加入・検討中・不明として記入された種目' }));
+    return out;
+  };
+  B.fig_dedsim = (ch, ctx) => { const o = RR.charts.dedsim({ w: FW }); return o.empty ? [p('免責の見直し案は登録されていません。「保険と免責」画面または「12 保険プログラム」の「免責の見直し案」に、対象の証券と検討する免責金額を記入すると、ここに比較が出ます。')] : [fig('図　免責を引き上げた場合の、保険料と自己負担の比較（年あたり）', o)]; };
+  B.dedsim_table = () => {
+    const sims = RR.dedSim(), R = RR.compute(); if (!sims.length) return [];
+    const out = [h3('免責の見直し案の比較')];
+    for (const d of sims) out.push(tbl([{ h: '案' }, { h: '免責金額', cls: 'num', w: '11%' }, { h: '年間保険料', cls: 'num', w: '12%' }, { h: '保険料の削減', cls: 'num', w: '11%' }, { h: '自己負担の見込み（年）', cls: 'num', w: '13%' }, { h: 'その増加', cls: 'num', w: '10%' }, { h: '正味（年）', cls: 'num', w: '10%' }, { h: '1回の自己負担', w: '13%' }], d.rows.map((r, i) => [E(r.label) + (r.note ? `<br><span class="eff">${E(r.note)}</span>` : ''), M(r.ded), r.prem === null ? unc('未記入') : M(r.prem) + (r.est ? '<br><span class="eff">目安</span>' : ''), i ? (r.saving === null ? '—' : M(r.saving)) : '—', M(r.ret.total) + `<br><span class="eff">小口 ${M(r.ret.small)}／大口 ${M(r.ret.big)}</span>`, i ? M(r.retInc) : '—', i ? (r.netGain === null ? '—' : `<b>${r.netGain >= 0 ? '−' : '＋'}${M(Math.abs(r.netGain))}</b>`) : '—', `${M(r.maxRet)}${r.ok ? '' : ' ' + unc('許容額超')}`]), { cls: 'small', cap: `${d.pol.id} ${d.type}（支払限度額 ${RR.money(d.limit)}）` }));
+    out.push(note(`自己負担の見込み ＝ 小口の事故（年間件数 × 1件あたりの平均損害額のうち免責までの額）＋ 大口の事故（評価したリスクの損害額のうち免責までの額 × 起こりやすさ）。正味の「−」は現状より有利、「＋」は不利。1回の自己負担は、自己負担できる額（${M(R.retention)}）と比べています。見積のない案は、係数表「免責金額と保険料の割引の目安」（仮置き）による試算です。`));
+    return out;
+  };
+  B.policy_table = () => [h3('個別保険の一覧'), tbl([{ h: 'ID', w: '6%' }, { h: '種目' }, { h: '状況', w: '8%' }, { h: '保険会社', w: '14%' }, { h: '支払限度額', cls: 'num', w: '11%' }, { h: '免責金額', cls: 'num', w: '10%' }, { h: '水災', w: '12%' }, { h: '保険料', cls: 'num', w: '9%' }, { h: '満期', w: '10%' }], RR.rows('policy').filter((x) => x.f.pol_type !== '包括（アンブレラ）').map((x) => { const on = !x.f.pol_status || x.f.pol_status === '加入'; return [E(x.id), E(x.f.pol_type), on ? '加入' : `<b>${E(x.f.pol_status)}</b>`, E(x.f.pol_insurer || ''), on ? M(x.f.pol_limit) : '—', on ? M(x.f.pol_ded || 0) : '—', x.f.pol_flood === 'あり' ? 'あり' + (x.f.pol_flood_limit !== undefined ? '（' + M(x.f.pol_flood_limit) + '）' : '') : on && x.f.pol_type === '企業財産（火災）' ? unc('未記入') : '—', on && x.f.pol_premium !== undefined ? M(x.f.pol_premium) : '—', E(x.f.pol_expiry || '')]; }), { cls: 'small', empty: '保険証券の記入はありません。すべてのリスクを保険なしとして試算しています。' })];
+  B.fig_insbars = (ch, ctx) => B.fig_tower(ch, ctx);
+  B.coverage_table = () => { const R = RR.compute(), L = R.level; return [h3('リスクごとの補償の内訳'), tbl([{ h: 'リスク' }, { h: '紐づく証券', w: '20%' }, { h: '損害', cls: 'num', w: '9%' }, { h: '個別の免責', cls: 'num', w: '9%' }, { h: '個別保険', cls: 'num', w: '9%' }, { h: '帯', cls: 'num', w: '8%' }, { h: '包括', cls: 'num', w: '8%' }, { h: '超過・なし', cls: 'num', w: '9%' }, { h: '自己負担計', cls: 'num', w: '9%' }], R.headline.map((i) => { const g = i.ins[L].seg; return [lab(i), i.policies.length ? E(i.policies.map((x) => x.id).join('、')) : '<b>なし</b>', M(i.loss[L]), M(g.ded), M(g.prim), g.gap > 0 ? M(g.gap) : '—', g.umb > 0 ? M(g.umb) : '—', g.over > 0 ? M(g.over) : '—', `<b>${M(ret(i, L))}</b>`]; }), { cls: 'small' }), note('個別保険は、損害額のうち免責金額を超え、支払限度額までの部分を支払う前提で試算しています。包括保険は、個別保険の支払限度額と包括の免責金額のうち大きい方を超えた部分を支払う前提です。種目とリスクの対応はリスク辞書の定義によります。事業中断は、原因となる事故が補償の対象である場合に限られます。')]; };
+  B.deductible_note = () => { const R = RR.compute(); return [h3('免責金額の考え方'), p(`自己負担できる額は${M(R.retention)}とのご回答です。年に何度も起きる小口の事故は、免責金額を上げて自己負担し、その分の保険料を、損害の大きいリスクの限度額や、手当てのないリスクの補償に振り向ける考え方があります。一方で、免責金額を上げすぎると、1回の事故の自己負担が許容額を超えたり、包括保険の免責までの自己負担の帯が広がったりします。具体的な条件は、保険会社の見積によります。`)]; };
+
+  /* ---------- サイバー重点 ---------- */
+  B.spotlight_cyber = (ch, ctx) => {
+    const sp = (RR.chapters.spotlights || {}).cyber; if (!sp) return []; const R = RR.compute(), L = R.level; const cs = RR.cyberScore(); const st = R.items.find((i) => i.id === 'cyber_stop'), lk = R.items.find((i) => i.id === 'cyber_leak');
+    return [`<div class="spot kn0"><div class="spot-h">${E(sp.title)}</div>${sp.body.map((b) => `<p>${E(b)}</p>`).join('')}<div class="spot-k"><div><span>業務停止の損害（${E(RR.levelShort[L])}）</span><b>${st ? M(st.loss[L]) : '—'}</b></div><div><span>情報漏えいの損害</span><b>${lk ? M(lk.loss[L]) : '—'}</b></div><div><span>対策の到達度</span><b>${cs.done} / ${cs.total}</b></div><div><span>サイバー保険</span><b>${E(cs.ins)}</b></div></div><div class="spot-s">${E(sp.source)}</div></div>`];
+  };
+  B.risk_table = (ch, ctx, arg) => { const R = RR.compute(), L = R.level; const its = R.items.filter((i) => i.domain === arg); if (!its.length) return [note('この領域で損害を試算できるリスクはありません（入力が不足しているか、該当なし）。')]; return [h3('損害見積'), tbl([{ h: 'リスク' }, { h: RR.levelShort[0], cls: 'num', w: '11%' }, { h: RR.levelShort[1], cls: 'num', w: '11%' }, { h: RR.levelShort[2], cls: 'num', w: '11%' }, { h: '賄えない額', cls: 'num', w: '12%' }, { h: '何年に1度', w: '12%' }, { h: '未確認', w: '10%' }], its.map((i) => [lab(i), M(i.loss[0]), M(i.loss[1]), M(i.loss[2]), `<b>${M(i.uninsured[L])}</b>`, E(RR.periodText(i.T)), i.unconfirmed.length ? unc(String(i.unconfirmed.length)) : '']), { cls: 'small' }), note('算出根拠は網羅版の各章と付録に載せています。')]; };
+  B.cyber_score = () => { const cs = RR.cyberScore(); return [h3(`サイバー対策の到達度（${cs.done} / ${cs.total}）`), tbl([{ h: '対策' }, { h: '状況', w: '12%', cls: 'ctr' }, { h: '回答', w: '34%' }], cs.items.map((x) => [E(x.label), x.ok ? '<b>済</b>' : unc('未了'), E(x.ans)]), { cls: 'small' })]; };
+  B.industry_focus = () => { const pk = RR.pack || {}; const R = RR.compute(), L = R.level; if (!pk.note) return []; const its = (pk.focus || []).map((id) => R.items.filter((i) => i.id === id).sort((a, b) => b.loss[L] - a.loss[L])[0]).filter(Boolean); return [h3(`業種（${pk.id}）で重点となるリスク`), p(E(pk.note)), tbl([{ h: 'リスク' }, { h: RR.levelShort[L], cls: 'num', w: '13%' }, { h: '賄えない額', cls: 'num', w: '13%' }, { h: '何年に1度', w: '14%' }], its.map((i) => [lab(i), M(i.loss[L]), `<b>${M(i.uninsured[L])}</b>`, E(RR.periodText(i.T))]), { cls: 'small', empty: '重点リスクは、回答からはまだ試算されていません。' })]; };
+  B.aging_table = () => { const r = RR.rows('line').filter((l) => l.f.line_age !== undefined || l.f.line_rebuy || l.f.line_eol); return r.length ? [h3('設備の経年劣化と再調達'), tbl([{ h: '拠点', w: '16%' }, { h: RR.t('工程・ライン') }, { h: '経過年数', cls: 'num', w: '9%' }, { h: '保守・部品', w: '11%' }, { h: '同等設備の再調達', w: '20%' }, { h: '再構築期間', cls: 'num', w: '11%' }], r.map((l) => [E(RR.siteName(l.f.line_site)), E(l.f.line_name), l.f.line_age === undefined ? '—' : l.f.line_age + '年', E(l.f.line_eol || '—'), l.f.line_rebuy && l.f.line_rebuy !== '可能' ? `<b>${E(l.f.line_rebuy)}</b>` : E(l.f.line_rebuy || '—'), l.f.line_rebuild === undefined ? '—' : l.f.line_rebuild + 'か月']), { cls: 'small' }), note('再調達が困難・不可、または保守が終了した設備は、被災時の復旧期間を係数表の倍率で長く見積もっています。最悪の場合は、再構築にかかる期間を使います。')] : []; };
+  B.liab_matrix = () => { const R = RR.compute(), L = R.level; const ids = RR.risks.filter((r) => r.domain === 'liab' || ['wc', 'epl', 'auto', 'mycar', 'bike'].includes(r.id)).map((r) => r.id); const its = R.headline.filter((i) => ids.includes(i.id)); return [h3('賠償責任の整理（施設賠償・PL・リコール・食中毒・自転車・マイカー）'), tbl([{ h: 'リスク' }, { h: '通常／最悪', cls: 'num', w: '18%' }, { h: '対応する保険（加入状況）', w: '30%' }, { h: '賄えない額', cls: 'num', w: '12%' }, { h: '何年に1度', w: '12%' }], its.map((i) => [lab(i), `${M(i.loss[0])}／${M(i.loss[2])}`, E(policyTypeOf(RR.riskById[i.id]).map((t) => t.label + '（' + (polStatus(t.label) || '記入なし') + '）').join('、')) + (i.policies.some((x) => x.umb) ? '<br><span class="eff">包括保険の対象</span>' : ''), `<b>${M(i.uninsured[L])}</b>`, E(RR.periodText(i.T))]), { cls: 'small', empty: '賠償責任のリスクは試算されていません。' })]; };
+  B.credit_table = () => { const v = (id) => RR.val(id); const R = RR.compute(), L = R.level; const d = R.items.find((i) => i.id === 'credit_dom'), o = R.items.find((i) => i.id === 'credit_ovs'); const row = (lbl, it, real, mx) => [E(lbl), M(v(real)) === '—' ? unc('未記入') : M(v(real)), M(v(mx)) === '—' ? unc('未記入') : M(v(mx)), it ? `<b>${M(it.uninsured[L])}</b>` : '—', it ? E(RR.periodText(it.T)) : '—']; return [h3('与信（貸倒れ）のヒアリング'), tbl([{ h: '区分', w: '14%' }, { h: '現実的に起こりうる年間の最大貸倒れ額', cls: 'num' }, { h: '最悪の場合', cls: 'num', w: '14%' }, { h: '賄えない額', cls: 'num', w: '13%' }, { h: '何年に1度', w: '13%' }], [row('国内', d, 'fn_bd_real_dom', 'fn_bd_max_dom'), row('海外', o, 'fn_bd_real_ovs', 'fn_bd_max_ovs')], { cls: 'small' }), tbl([{ h: '項目', w: '40%' }, { h: '回答' }], [['海外取引の主な決済条件', E(v('fn_export_terms') || '') || unc('未記入')], ['取引信用保険・貿易保険', E(v('fn_credit_ins') || '') || unc('未記入')], ['与信管理', E(v('fn_credit') || '') || unc('未記入')], ['取引先の信用調査', E(v('fn_credit_info') || '') || unc('未記入')], ['過去5年の貸倒れ実績（最も多かった年）', M(v('fn_bd_hist'))]], { cls: 'small' }), note('最大の取引先が倒れた場合の額ではなく、「1年でこのくらいは起こりうる」という現実的な額をヒアリングしています。最悪の場合は、大口の取引先の倒産や、輸出先の国の送金規制などを想定した額です。')]; };
+  B.travel_table = () => { const v = (id) => RR.val(id); if (!(Number(v('ov_trips')) > 0 || Number(v('ov_expat')) > 0)) return []; return [h3('海外出張・駐在'), tbl([{ h: '項目', w: '40%' }, { h: '回答' }], [['年間の海外出張者数（延べ）', E(v('ov_trips') || '') + '人'], ['海外駐在員（帯同家族を含む）', E(v('ov_expat') || '0') + '人'], ['海外出張・駐在の保険', v('ov_travel_ins') === 'クレジットカード付帯のみ' || v('ov_travel_ins') === 'なし' ? `<b>${E(v('ov_travel_ins'))}</b>` : E(v('ov_travel_ins') || '') || unc('未記入')], ['主な渡航先', E(v('ov_dest') || '')]], { cls: 'small' }), note('海外では、治療費や日本への搬送費が高額になることがあります。クレジットカード付帯の保険は、治療・救援費用の限度額が低かったり、カードで旅費を支払った場合に限られたりするため、補償額と条件を確認してください。')]; };
+  B.bcp_table = () => { const st = RR.val('bcp_status'); return [h3(`BCP（事業継続計画）：${st || '未回答'}`), itemsTable('bcp', { cap: 'BCPの状況' }), note('BCPの策定状況と代替拠点の取り決めは、事業中断の損害見積に反映しています（質問マスタの「評価への反映」を参照）。')]; };
+
+  /* ---------- 事故発生の想定と対応 ---------- */
+  RP.scenarioData = function () {
+    const R = RR.compute(), L = R.level;
+    return RR.scenarios.map((sc) => {
+      const its = R.items.filter((i) => sc.risks.includes(i.id)); const prim = its.filter((i) => i.id === sc.primary).sort((a, b) => b.loss[L] - a.loss[L])[0] || its.sort((a, b) => b.loss[L] - a.loss[L])[0] || null;
+      const as = RR.rows('assume').find((a) => a.f.as_risk === (RR.riskById[sc.primary] || {}).name && !a.f.as_site) || null;
+      return { sc, its, prim, as };
+    });
+  };
+  B.scenario_table = () => { const R = RR.compute(), L = R.level; const rows = RP.scenarioData(); return [h3('主な事故の想定（一覧）'), tbl([{ h: '事故' }, { h: '何年に1度', w: '12%' }, { h: '現実的な損害', cls: 'num', w: '12%' }, { h: '最大の損害', cls: 'num', w: '12%' }, { h: '保険で賄える見込み', cls: 'num', w: '13%' }, { h: '身体・財物への大きな損害', w: '13%' }, { h: '対応手順', w: '12%' }], rows.map(({ sc, prim, as }) => { if (!prim) return [E(sc.name), '—', '—', '—', '—', E((as && as.f.as_bodily) || (sc.bodily ? '想定される' : '—')), E((as && as.f.as_ready) || '—')]; return [E(sc.name) + (prim.siteId ? `<br><span class="eff">${E(RR.siteName(prim.siteId))}</span>` : ''), E(RR.periodText(prim.T)), M(prim.loss[0]), M(prim.loss[2]), M(prim.loss[L] - prim.uninsured[L]), E((as && as.f.as_bodily) || (sc.bodily ? '想定される' : '不明')), (as && as.f.as_ready) ? E(as.f.as_ready) : unc('未記入')]; }), { cls: 'small' }), note('「現実的な損害」は損害見積の通常の水準、「最大の損害」は最悪の場合の水準です。担当者の想定（何年に1度、現実的・最大の損害）を記入したものは、その値を使っています。拠点ごとのリスクは、損害が最も大きい拠点を示しています。')]; };
+  B.scenario_cards = (ch, ctx) => {
+    const R = RR.compute(), L = R.level; const out = [];
+    let list = RP.scenarioData(); if (ctx.quick) list = list.filter((x) => x.prim).sort((a, b) => b.prim.loss[2] - a.prim.loss[2]).slice(0, 8);
+    for (const { sc, its, prim, as } of list) {
+      if (!prim && !as) continue;
+      const seg = prim ? prim.ins[L].seg : null;
+      out.push(`<div class="scn-h kn"><span class="scn-n">事故想定</span>${E(sc.name)}</div>`);
+      if (prim) out.push(tbl([{ h: '項目', w: '32%' }, { h: '内容' }], [['頻度', `${E(RR.periodText(prim.T))}程度${prim.assume && prim.assume.T ? '（担当者の想定）' : '（回答と係数による試算）'}`], ['被害の想定', `現実的には${M(prim.loss[0])}、最大で${M(prim.loss[2])}${prim.siteId ? '（' + E(RR.siteName(prim.siteId)) + '）' : ''}`], ['保険の手当て（' + E(RR.levelShort[L]) + '）', `個別保険 ${M(seg.prim)}、包括保険 ${M(seg.umb)}、自己負担 <b>${M(seg.ded + seg.gap + seg.over)}</b>`], ['身体・財物への大きな損害', E((as && as.f.as_bodily) || (sc.bodily ? '想定される' : '不明'))], ['関係するリスク', E(its.map((i) => i.label.replace('｜', '・')).slice(0, 6).join('、'))], ['対応手順・担当', `${(as && as.f.as_ready) ? E(as.f.as_ready) : unc('未記入')}${as && as.f.as_owner ? '　担当：' + E(as.f.as_owner) : ''}`]], { cls: 'small' }));
+      out.push(`<div class="acts kn0">${Object.keys(sc.actions || {}).map((k) => `<div class="act"><div class="act-h">${E(k)}</div><ul>${sc.actions[k].map((x) => `<li>${E(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
+      if (as && as.f.as_actions) out.push(`<div class="unc-box kn0"><b>この会社で追加して対応すること</b>　${E(as.f.as_actions)}</div>`);
+      postBlocks(RP.postsAt('scn:' + sc.id)).forEach((x) => out.push(x));
+    }
+    return out;
+  };
+
+  RP.B = B;
   /* ---------- 章の一覧（画面とプロンプトでも使う） ---------- */
   RP.chapterList = function (quick) {
     return RR.chapters.chapters.filter((c) => (!quick || c.quick) && (c.id !== 'c12' || true));
@@ -199,8 +312,8 @@
   RP.chapterBlocks = function (ch, ctx) {
     const out = [];
     if (ch.id === 'c12' && RR.val('ov_has') === 'なし' && !RR.rows('overseas').length) return [p(E(ch.emptyNote || '該当なし'))];
-    const skipQuick = { c5: ['gap_table', 'accum_table'], c15: ['roadmap'], c1: ['summary_actions'] };
-    for (const b of ch.blocks) { const [name, arg] = b.split(':'); const fn = B[name]; if (ctx.quick && (skipQuick[ch.id] || []).includes(name)) continue; if (!fn) { out.push(note(`章定義の部品「${E(b)}」は未定義です。`)); continue; } for (const x of fn(ch, ctx, arg) || []) if (x) out.push(x); }
+    const skipQuick = { c2: ['method_limits', 'method_confirm'], c_ins: ['coverage_table'], c5: ['gap_table', 'accum_table', 'register_table'], c15: ['roadmap'], c1: ['summary_actions', 'summary_three'], c3: ['flow_table'], c7: ['partner_table', 'items'], c8: ['items', 'system_table'], c9: ['items', 'product_table'], c10: ['items'], c11: ['items'], c12: ['items', 'overseas_table'], c13: ['gap_table'] };
+    for (const b of ch.blocks) { let [name, arg] = b.split(':'); if (ctx.quick && name === 'risk_cards') name = 'risk_table'; const fn = B[name]; if (ctx.quick && (skipQuick[ch.id] || []).includes(name)) continue; if (!fn) { out.push(note(`章定義の部品「${E(b)}」は未定義です。`)); continue; } for (const x of fn(ch, ctx, arg) || []) if (x) out.push(x); }
     return out;
   };
 
@@ -247,12 +360,15 @@
     }
     const chapters = RP.chapterList(quick); let tocPage = null;
     for (const ch of chapters) {
-      const headText = ch.no ? `${ch.no}${/^\d/.test(ch.no) ? '' : ''} ${ch.title}` : ch.title;
+      const no = RR.chapNo(ch, quick); ctx.no = no;
+      const headText = no ? `${no} ${ch.title}` : ch.title;
       if (ch.id === 'cover') { newPage('', true); cur.pb.innerHTML = B.cover(ch, ctx)[0]; continue; }
-      newPage(headText);
+      const used = cur && !cur.sec.classList.contains('bare') && cur.pb.lastElementChild ? cur.pb.lastElementChild.getBoundingClientRect().bottom - cur.pb.getBoundingClientRect().top : 9999;
+      const cont = quick && ch.id !== 'toc' && ch.id !== 'close' && toc.length > 0 && cur && used < cur.pb.clientHeight * 0.55;
+      if (!cont) newPage(headText); else { cur.head = headText; }
       if (ch.id === 'toc') { tocPage = cur; cur.pb.innerHTML = B.toc()[0]; continue; }
-      toc.push({ no: ch.no, title: ch.title, page: pages.length, lvl: 0 });
-      cur.pb.appendChild(toNode(`<div class="ch-open"><div class="ch-no">${E(ch.no || '')}</div><div class="ch-t"><h2>${E(ch.title)}</h2>${ch.lead ? `<div class="ch-lead">${E(ch.lead)}</div>` : ''}</div></div>`));
+      toc.push({ no, title: ch.title, page: pages.length, lvl: 0 });
+      cur.pb.appendChild(toNode(`<div class="ch-open${cont ? ' cont kn' : ''}"><div class="ch-no">${E(no || '')}</div><div class="ch-t"><h2>${E(ch.title)}</h2>${ch.lead ? `<div class="ch-lead">${E(ch.lead)}</div>` : ''}</div></div>`));
       let head = headText;
       for (const b of RP.chapterBlocks(ch, ctx)) {
         if (typeof b === 'object') { if (b.head) head = b.head; if (b.newPage && cur.pb.children.length > 1) newPage(head); else cur.head = head; const node = toNode(b.html); place(node, head); if (node.dataset.toc) toc.push({ no: '', title: node.dataset.toc, page: pages.indexOf(cur) + 1, lvl: 1 }); const rhs = cur.sec.querySelector('.rh span:last-child'); if (rhs) rhs.textContent = head; continue; }

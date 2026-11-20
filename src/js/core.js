@@ -29,7 +29,7 @@ const RR = (window.RR = { v: '1.0.0' });
   RR.rebuild = function () {
     const Q = RR.raw.questions, R = RR.raw.risks, I = RR.raw.industries;
     const ind = RR.case ? (RR.case.items.co_industry || {}).v : null;
-    const pack = I.packs.find((p) => p.id === ind) || { id: ind, terms: {}, questions: [], risks: [] };
+    const pack = I.packs.find((p) => p.id === ind) || I.packs.find((p) => (p.aliases || []).includes(ind)) || { id: ind, terms: {}, questions: [], risks: [], focus: [], note: '' };
     RR.pack = pack;
     RR.layers = Q.layers;
     RR.sheets = Q.sheets;
@@ -44,7 +44,19 @@ const RR = (window.RR = { v: '1.0.0' });
     RR.coef = {}; RR.raw.coefficients.tables.forEach((t) => (RR.coef[t.id] = t));
     RR.levelNames = RR.raw.coefficients.levelNames; RR.levelShort = RR.raw.coefficients.levelShort;
     RR.chapters = RR.raw.chapters;
+    RR.scenarios = R.scenarios || []; RR.umbrellaScopes = R.umbrellaScopes || [];
+    /* 章番号は並び順から自動で振る（章を足しても崩れない） */
+    let n = 0; RR.chapters.chapters.forEach((c) => { if (['cover', 'toc', 'apx', 'close'].includes(c.id)) c.no = c.id === 'apx' ? '付録' : ''; else c.no = String(++n); });
   };
+  RR.chapNo = function (ch, quick) { if (['cover', 'toc', 'apx', 'close'].includes(ch.id)) return ch.no; const list = RR.chapters.chapters.filter((c) => !['cover', 'toc', 'apx', 'close'].includes(c.id) && (!quick || c.quick)); return String(list.indexOf(ch) + 1); };
+  RR.places = function () {
+    const out = [{ v: 'ch:c1', l: '冒頭（エグゼクティブサマリー）' }];
+    RR.chapters.chapters.forEach((c) => { if (!['cover', 'toc', 'close', 'c1', 'c6'].includes(c.id)) out.push({ v: 'ch:' + c.id, l: '章：' + c.no + (c.no && c.no !== '付録' ? '　' : '') + c.title }); });
+    RR.rows('site').forEach((s) => out.push({ v: 'site:' + s.id, l: '拠点：' + s.id + ' ' + (s.f.site_name || '') }));
+    RR.scenarios.forEach((x) => out.push({ v: 'scn:' + x.id, l: '事故想定：' + x.name }));
+    return out;
+  };
+  RR.placeLabel = (v) => { const p = RR.places().find((x) => x.v === v); return p ? p.l : v || '（未設定）'; };
   RR.qsOf = (layer) => RR.qs.filter((q) => q.layer === layer);
   RR.t = function (s) { const tm = (RR.pack && RR.pack.terms) || {}; let o = String(s); for (const k in tm) o = o.split(k).join(tm[k]); return o; };
   RR.optsOf = function (q) {
@@ -55,6 +67,7 @@ const RR = (window.RR = { v: '1.0.0' });
     if (o === '@policyTypes') return RR.policyTypes.map((p) => p.label);
     if (o === '@riskNames') return RR.risks.map((r) => r.name);
     if (o === '@prepLevels') return RR.prepLevels;
+    if (o === '@umbrellaScopes') return RR.umbrellaScopes.map((x) => x.label);
     return null;
   };
   /* 係数の取り出し */

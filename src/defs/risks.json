@@ -1,89 +1,1233 @@
 {
-"version":"1.0.0",
-"domains":[
- {"id":"prop","label":"モノ","long":"モノ（建物・設備・在庫）"},
- {"id":"bi","label":"事業の停止","long":"事業の停止"},
- {"id":"cyber","label":"サイバー","long":"サイバー"},
- {"id":"liab","label":"賠償","long":"賠償責任"},
- {"id":"people","label":"ヒト","long":"ヒトと労務"},
- {"id":"fin","label":"財務・経営","long":"財務・経営"},
- {"id":"ovs","label":"海外","long":"海外"}
-],
-"policyTypes":[
- {"id":"property","label":"企業財産（火災）","covers":["fire","flood","surge","slide","acc_flood"],"floodGated":["flood","surge","slide","acc_flood"]},
- {"id":"bi","label":"利益・営業継続","covers":["bi"]},
- {"id":"quake","label":"地震","covers":["quake","tsunami","acc_quake"]},
- {"id":"liability","label":"賠償責任（施設・生産物）","covers":["pl","premises"]},
- {"id":"recall","label":"リコール","covers":["recall"]},
- {"id":"cyber","label":"サイバー","covers":["cyber_stop","cyber_leak"]},
- {"id":"wc","label":"労災上乗せ・使用者賠償","covers":["wc"]},
- {"id":"auto","label":"自動車","covers":["auto"]},
- {"id":"dno","label":"役員賠償（D&O）","covers":["dno"]},
- {"id":"epl","label":"雇用慣行賠償","covers":["epl"]},
- {"id":"credit","label":"取引信用","covers":["credit"]},
- {"id":"overseas","label":"海外（現地・マスター）","covers":["ovs_asset"]},
- {"id":"other","label":"その他","covers":[]}
-],
-"perils":[
- {"id":"fire","label":"火災"},{"id":"flood","label":"水災"},{"id":"quake","label":"地震"},
- {"id":"surge","label":"高潮"},{"id":"tsunami","label":"津波"},{"id":"slide","label":"土砂"},{"id":"bi","label":"事業中断"}
-],
-"risks":[
- {"id":"fire","name":"火災・爆発","domain":"prop","scope":"site","formula":{"type":"fire"},"baseFreq":2,
-  "scenario":"電気設備や火気作業から出火し、建物・設備・在庫が焼損する。",
-  "measures":["電気設備の年次点検と赤外線診断","たこ足配線の是正と配線更新","火気使用の許可制","スプリンクラーの設置範囲の拡大","防火区画の貫通部の埋め戻し","消防訓練の年2回実施"]},
- {"id":"flood","name":"水災（洪水・内水）","domain":"prop","scope":"site","formula":{"type":"flood"},"baseFreq":1,
-  "scenario":"河川の氾濫または内水により敷地が浸水し、1階の設備・在庫が水没する。",
-  "measures":["止水板・防水扉の設置","受変電設備と重要設備の嵩上げ","在庫の上階・高所への移設","水位に応じた行動計画（タイムライン）の作成","水災補償の限度額の見直し"]},
- {"id":"quake","name":"地震","domain":"prop","scope":"site","formula":{"type":"quake"},"baseFreq":1,
-  "scenario":"想定地震の揺れにより建物が損傷し、設備が転倒・破損する。",
-  "measures":["耐震診断と補強","設備・棚のアンカー固定","金型・治具の落下防止","地震保険・地震危険補償の検討","緊急地震速報と連動した設備停止"]},
- {"id":"surge","name":"高潮","domain":"prop","scope":"site","formula":{"type":"surge"},"baseFreq":1,
-  "scenario":"台風による高潮で沿岸の敷地が浸水する。","measures":["止水板の設置","重要設備の嵩上げ","台風接近時の在庫移動手順"]},
- {"id":"tsunami","name":"津波","domain":"prop","scope":"site","formula":{"type":"tsunami"},"baseFreq":1,
-  "scenario":"地震に伴う津波で敷地が浸水する。","measures":["避難経路と避難先の確認","重要データの遠隔保管","代替生産先の事前合意"]},
- {"id":"slide","name":"土砂災害","domain":"prop","scope":"site","formula":{"type":"slide"},"baseFreq":1,
-  "scenario":"大雨により斜面が崩れ、建物の一部が土砂に埋まる。","measures":["斜面側の重要設備の移設","警戒情報に応じた避難基準","擁壁・排水の点検"]},
- {"id":"bi","name":"事業中断（拠点の被災）","domain":"bi","scope":"site","formula":{"type":"bi"},"baseFreq":2,
-  "scenario":"火災や自然災害で拠点が止まり、復旧までの間の利益を失う。",
-  "measures":["代替生産先（他拠点・外注）の事前合意","代えのきかない設備の予備品確保","製品在庫の分散保管","金型・図面の複製と別拠点保管","利益保険の補償期間と限度額の見直し"]},
- {"id":"acc_flood","name":"同一水系の同時被災","domain":"bi","scope":"accumulation","formula":{"type":"accFlood"},"baseFreq":1,
-  "scenario":"同じ水系にある複数の拠点が、1つの洪水で同時に浸水する。","measures":["拠点間で代替し合う前提の見直し","水系の異なる拠点・外注先への分散"]},
- {"id":"acc_quake","name":"同一地震の同時被災","domain":"bi","scope":"accumulation","formula":{"type":"accQuake"},"baseFreq":1,
-  "scenario":"同じ地震で複数の拠点が同時に被災し、互いに代替できなくなる。","measures":["想定地震の異なる地域への機能分散","地震時の資金手当て（保険・融資枠）の確保"]},
- {"id":"supplier","name":"仕入先の停止","domain":"bi","scope":"company","formula":{"type":"supplier"},"baseFreq":3,
-  "scenario":"代えのきかない仕入先が被災・倒産し、部材が入らず生産が止まる。",
-  "measures":["重要部材の複数社購買","安全在庫の積み増し","仕入先の被災想定の聞き取り","代替材の事前承認"]},
- {"id":"cyber_stop","name":"サイバー攻撃による業務停止","domain":"cyber","scope":"company","formula":{"type":"cyberStop"},"baseFreq":3,
-  "scenario":"身代金要求型の不正プログラムにより基幹システムが暗号化され、受注・生産・出荷が止まる。",
-  "measures":["バックアップの隔離保管と復元訓練","多要素認証の全社導入","外部接続機器の更新管理","事故対応手順の整備と訓練","サイバー保険の検討"]},
- {"id":"cyber_leak","name":"情報漏えい","domain":"cyber","scope":"company","formula":{"type":"cyberLeak"},"baseFreq":2,
-  "scenario":"不正アクセスや誤送信により個人情報・取引先情報が漏えいする。",
-  "measures":["保有情報の棚卸しと削減","委託先の管理","通知・公表の手順整備"]},
- {"id":"pl","name":"製品による賠償","domain":"liab","scope":"company","formula":{"type":"pl"},"baseFreq":2,
-  "scenario":"製品の欠陥により納入先や利用者に損害を与え、賠償を求められる。",
-  "measures":["契約の責任制限条項の整備","出荷検査記録の保管","海外販売分の補償範囲の確認"]},
- {"id":"recall","name":"製品の回収（リコール）","domain":"liab","scope":"company","formula":{"type":"recall"},"baseFreq":2,
-  "scenario":"不具合が見つかり、出荷済み製品の回収・交換費用を負担する。",
-  "measures":["ロット単位の追跡","回収手順の文書化","リコール費用の補償の検討"]},
- {"id":"premises","name":"施設・業務による賠償","domain":"liab","scope":"company","formula":{"type":"fixed","coef":"premises_amounts"},"baseFreq":2,
-  "scenario":"構内の事故や排水・排気により、来訪者や近隣に損害を与える。",
-  "measures":["構内協力会社との安全協議","有害物質の漏えい対策と点検"]},
- {"id":"wc","name":"労働災害","domain":"people","scope":"company","formula":{"type":"wc"},"baseFreq":2,
-  "scenario":"重大な労働災害が起き、会社の安全配慮義務が問われる。",
-  "measures":["危険作業の手順書と教育","設備の安全装置の点検","労災上乗せ補償の確認"]},
- {"id":"auto","name":"自動車事故","domain":"people","scope":"company","formula":{"type":"fixed","coef":"auto_amounts"},"baseFreq":2,
-  "scenario":"業務中の交通事故で第三者を死傷させる。","measures":["運転者教育","アルコール確認の記録","ドライブレコーダーの活用"]},
- {"id":"epl","name":"雇用をめぐる争い","domain":"people","scope":"company","formula":{"type":"fixed","coef":"epl_amounts"},"baseFreq":2,
-  "scenario":"ハラスメントや解雇をめぐり、従業員から賠償を求められる。","measures":["相談窓口の設置","管理職研修","労働時間の把握"]},
- {"id":"credit","name":"取引先の倒産","domain":"fin","scope":"company","formula":{"type":"credit"},"baseFreq":2,
-  "scenario":"最大の顧客が倒産し、売掛金が回収できなくなる。","measures":["与信限度額の設定と見直し","取引信用保険の検討","回収条件の短縮"]},
- {"id":"dno","name":"役員の賠償責任","domain":"fin","scope":"company","formula":{"type":"dno"},"baseFreq":1,
-  "scenario":"経営判断や監督の不備を理由に、株主や取引先から役員が訴えられる。","measures":["取締役会の議事記録の整備","役員賠償責任保険の確認"]},
- {"id":"fraud","name":"従業員による不正","domain":"fin","scope":"company","formula":{"type":"revenueRate","coef":"fraud_rates"},"baseFreq":2,
-  "scenario":"経理担当者による着服や架空発注が長期間発覚しない。","measures":["発注・支払・記帳の分離","抜き打ちの残高照合","長期担当者の配置換え"]},
- {"id":"ovs_asset","name":"海外拠点の損害","domain":"ovs","scope":"overseas","formula":{"type":"overseas"},"baseFreq":2,
-  "scenario":"海外拠点が災害・政情不安で被害を受け、現地の保険で賄えない。",
-  "measures":["現地証券の写しの収集と内容確認","本社の保険で現地の不足を補う仕組みの検討","駐在員の緊急退避手順"]}
-]
+ "version": "2.0.0",
+ "domains": [
+  {
+   "id": "prop",
+   "label": "モノ",
+   "long": "モノ（建物・設備・在庫）"
+  },
+  {
+   "id": "bi",
+   "label": "事業の停止",
+   "long": "事業の停止"
+  },
+  {
+   "id": "cyber",
+   "label": "サイバー",
+   "long": "サイバー"
+  },
+  {
+   "id": "liab",
+   "label": "賠償",
+   "long": "賠償責任"
+  },
+  {
+   "id": "people",
+   "label": "ヒト",
+   "long": "ヒトと労務"
+  },
+  {
+   "id": "fin",
+   "label": "財務・与信",
+   "long": "財務・与信"
+  },
+  {
+   "id": "ovs",
+   "label": "海外",
+   "long": "海外（拠点・出張）"
+  }
+ ],
+ "policyTypes": [
+  {
+   "id": "property",
+   "label": "企業財産（火災）",
+   "covers": [
+    "fire",
+    "flood",
+    "surge",
+    "slide",
+    "wind",
+    "lightning",
+    "acc_flood"
+   ],
+   "floodGated": [
+    "flood",
+    "surge",
+    "slide",
+    "acc_flood"
+   ]
+  },
+  {
+   "id": "bi",
+   "label": "利益・営業継続",
+   "covers": [
+    "bi"
+   ]
+  },
+  {
+   "id": "quake",
+   "label": "地震（地震危険補償）",
+   "covers": [
+    "quake",
+    "tsunami",
+    "acc_quake"
+   ]
+  },
+  {
+   "id": "machine",
+   "label": "機械（電気的・機械的事故）",
+   "covers": [
+    "ix_mfg_machine"
+   ]
+  },
+  {
+   "id": "premises",
+   "label": "施設賠償",
+   "covers": [
+    "premises"
+   ]
+  },
+  {
+   "id": "pl",
+   "label": "生産物賠償（PL）",
+   "covers": [
+    "pl",
+    "foodpoison"
+   ]
+  },
+  {
+   "id": "recall",
+   "label": "リコール（生産物回収）",
+   "covers": [
+    "recall"
+   ]
+  },
+  {
+   "id": "cyber",
+   "label": "サイバー",
+   "covers": [
+    "cyber_stop",
+    "cyber_leak"
+   ]
+  },
+  {
+   "id": "el",
+   "label": "使用者賠償・労災上乗せ",
+   "covers": [
+    "wc"
+   ]
+  },
+  {
+   "id": "epl",
+   "label": "雇用慣行賠償",
+   "covers": [
+    "epl"
+   ]
+  },
+  {
+   "id": "auto",
+   "label": "自動車（社用車）",
+   "covers": [
+    "auto"
+   ]
+  },
+  {
+   "id": "mycar",
+   "label": "マイカー業務使用の使用者責任",
+   "covers": [
+    "mycar"
+   ]
+  },
+  {
+   "id": "bike",
+   "label": "自転車（業務使用の賠償）",
+   "covers": [
+    "bike"
+   ]
+  },
+  {
+   "id": "travel",
+   "label": "海外旅行（出張・駐在）",
+   "covers": [
+    "travel"
+   ]
+  },
+  {
+   "id": "credit",
+   "label": "取引信用（国内）",
+   "covers": [
+    "credit_dom"
+   ]
+  },
+  {
+   "id": "trade",
+   "label": "貿易保険・輸出取引信用",
+   "covers": [
+    "credit_ovs"
+   ]
+  },
+  {
+   "id": "dno",
+   "label": "役員賠償（D&O）",
+   "covers": [
+    "dno"
+   ]
+  },
+  {
+   "id": "fidelity",
+   "label": "身元信用",
+   "covers": [
+    "fraud"
+   ]
+  },
+  {
+   "id": "overseas",
+   "label": "海外拠点（現地・マスター）",
+   "covers": [
+    "ovs_asset"
+   ]
+  },
+  {
+   "id": "umbrella",
+   "label": "包括（アンブレラ）",
+   "covers": [],
+   "umbrella": true
+  },
+  {
+   "id": "other",
+   "label": "その他",
+   "covers": []
+  }
+ ],
+ "perils": [
+  {
+   "id": "fire",
+   "label": "火災"
+  },
+  {
+   "id": "flood",
+   "label": "水災"
+  },
+  {
+   "id": "quake",
+   "label": "地震"
+  },
+  {
+   "id": "wind",
+   "label": "風災"
+  },
+  {
+   "id": "lightning",
+   "label": "落雷"
+  },
+  {
+   "id": "surge",
+   "label": "高潮"
+  },
+  {
+   "id": "tsunami",
+   "label": "津波"
+  },
+  {
+   "id": "slide",
+   "label": "土砂"
+  },
+  {
+   "id": "special",
+   "label": "特有"
+  },
+  {
+   "id": "bi",
+   "label": "事業中断"
+  }
+ ],
+ "risks": [
+  {
+   "id": "fire",
+   "name": "火災・爆発",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "fire"
+   },
+   "baseFreq": 2,
+   "scenario": "電気設備や火気作業から出火し、建物・設備・在庫が焼損する。",
+   "measures": [
+    "電気設備の年次点検と赤外線診断",
+    "たこ足配線の是正と配線更新",
+    "火気使用の許可制",
+    "スプリンクラーの設置範囲の拡大",
+    "防火区画の貫通部の埋め戻し",
+    "消防訓練の年2回実施"
+   ]
+  },
+  {
+   "id": "flood",
+   "name": "水災（洪水・内水）",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "flood"
+   },
+   "baseFreq": 1,
+   "scenario": "河川の氾濫または内水により敷地が浸水し、1階の設備・在庫が水没する。",
+   "measures": [
+    "止水板・防水扉の設置",
+    "受変電設備と重要設備の嵩上げ",
+    "在庫の上階・高所への移設",
+    "水位に応じた行動計画（タイムライン）の作成",
+    "水災補償の限度額の見直し"
+   ]
+  },
+  {
+   "id": "quake",
+   "name": "地震",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "quake"
+   },
+   "baseFreq": 1,
+   "scenario": "想定地震の揺れにより建物が損傷し、設備が転倒・破損する。",
+   "measures": [
+    "耐震診断と補強",
+    "設備・棚のアンカー固定",
+    "金型・治具の落下防止",
+    "地震保険・地震危険補償の検討",
+    "緊急地震速報と連動した設備停止"
+   ]
+  },
+  {
+   "name": "風災（台風・竜巻・雹・雪）",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "wind"
+   },
+   "baseFreq": 2.5,
+   "scenario": "台風や竜巻で屋根・外壁・窓が壊れ、雨水が入って設備や在庫が濡れる。",
+   "measures": [
+    "屋根・外壁の定期点検と補修",
+    "台風前の飛散物の撤去と開口部の養生",
+    "屋外設備・太陽光パネルの固定の確認",
+    "老朽化した屋根の葺き替え"
+   ],
+   "id": "wind"
+  },
+  {
+   "name": "落雷・異常電圧",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "lightning"
+   },
+   "baseFreq": 2,
+   "scenario": "落雷による過電圧で、制御盤・サーバー・精密機器が壊れ、生産や業務が止まる。",
+   "measures": [
+    "雷サージ保護装置（SPD）の設置",
+    "避雷設備の点検",
+    "重要設備の予備品・予備基板の確保",
+    "無停電電源装置（UPS）の配備"
+   ],
+   "id": "lightning"
+  },
+  {
+   "id": "surge",
+   "name": "高潮",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "surge"
+   },
+   "baseFreq": 1,
+   "scenario": "台風による高潮で沿岸の敷地が浸水する。",
+   "measures": [
+    "止水板の設置",
+    "重要設備の嵩上げ",
+    "台風接近時の在庫移動手順"
+   ]
+  },
+  {
+   "id": "tsunami",
+   "name": "津波",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "tsunami"
+   },
+   "baseFreq": 1,
+   "scenario": "地震に伴う津波で敷地が浸水する。",
+   "measures": [
+    "避難経路と避難先の確認",
+    "重要データの遠隔保管",
+    "代替生産先の事前合意"
+   ]
+  },
+  {
+   "id": "slide",
+   "name": "土砂災害",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "slide"
+   },
+   "baseFreq": 1,
+   "scenario": "大雨により斜面が崩れ、建物の一部が土砂に埋まる。",
+   "measures": [
+    "斜面側の重要設備の移設",
+    "警戒情報に応じた避難基準",
+    "擁壁・排水の点検"
+   ]
+  },
+  {
+   "name": "拠点に特有の危険",
+   "domain": "prop",
+   "scope": "site",
+   "formula": {
+    "type": "special"
+   },
+   "baseFreq": 1.5,
+   "scenario": "一般的な項目では拾えない、この拠点に特有の危険が現実になる。",
+   "measures": [
+    "特有の危険について専門家の診断を受ける",
+    "想定する損害額と頻度を年1回見直す"
+   ],
+   "id": "special"
+  },
+  {
+   "id": "bi",
+   "name": "事業中断（拠点の被災）",
+   "domain": "bi",
+   "scope": "site",
+   "formula": {
+    "type": "bi"
+   },
+   "baseFreq": 2,
+   "scenario": "火災や自然災害で拠点が止まり、復旧までの間の利益を失う。",
+   "measures": [
+    "代替生産先（他拠点・外注）の事前合意",
+    "代えのきかない設備の予備品確保",
+    "製品在庫の分散保管",
+    "金型・図面の複製と別拠点保管",
+    "利益保険の補償期間と限度額の見直し"
+   ]
+  },
+  {
+   "id": "acc_flood",
+   "name": "同一水系の同時被災",
+   "domain": "bi",
+   "scope": "accumulation",
+   "formula": {
+    "type": "accFlood"
+   },
+   "baseFreq": 1,
+   "scenario": "同じ水系にある複数の拠点が、1つの洪水で同時に浸水する。",
+   "measures": [
+    "拠点間で代替し合う前提の見直し",
+    "水系の異なる拠点・外注先への分散"
+   ]
+  },
+  {
+   "id": "acc_quake",
+   "name": "同一地震の同時被災",
+   "domain": "bi",
+   "scope": "accumulation",
+   "formula": {
+    "type": "accQuake"
+   },
+   "baseFreq": 1,
+   "scenario": "同じ地震で複数の拠点が同時に被災し、互いに代替できなくなる。",
+   "measures": [
+    "想定地震の異なる地域への機能分散",
+    "地震時の資金手当て（保険・融資枠）の確保"
+   ]
+  },
+  {
+   "id": "supplier",
+   "name": "仕入先の停止",
+   "domain": "bi",
+   "scope": "company",
+   "formula": {
+    "type": "supplier"
+   },
+   "baseFreq": 3,
+   "scenario": "代えのきかない仕入先が被災・倒産し、部材が入らず生産が止まる。",
+   "measures": [
+    "重要部材の複数社購買",
+    "安全在庫の積み増し",
+    "仕入先の被災想定の聞き取り",
+    "代替材の事前承認"
+   ]
+  },
+  {
+   "id": "cyber_stop",
+   "name": "サイバー攻撃による業務停止",
+   "domain": "cyber",
+   "scope": "company",
+   "formula": {
+    "type": "cyberStop"
+   },
+   "baseFreq": 3.5,
+   "scenario": "身代金要求型の不正プログラムにより基幹システムが暗号化され、受注・生産・出荷が止まる。",
+   "measures": [
+    "バックアップの隔離保管と復元訓練",
+    "多要素認証の全社導入",
+    "外部接続機器の更新管理",
+    "事故対応手順の整備と訓練",
+    "サイバー保険の検討"
+   ]
+  },
+  {
+   "id": "cyber_leak",
+   "name": "情報漏えい",
+   "domain": "cyber",
+   "scope": "company",
+   "formula": {
+    "type": "cyberLeak"
+   },
+   "baseFreq": 2,
+   "scenario": "不正アクセスや誤送信により個人情報・取引先情報が漏えいする。",
+   "measures": [
+    "保有情報の棚卸しと削減",
+    "委託先の管理",
+    "通知・公表の手順整備"
+   ]
+  },
+  {
+   "id": "premises",
+   "name": "施設・業務による賠償（施設賠償）",
+   "domain": "liab",
+   "scope": "company",
+   "formula": {
+    "type": "fixed",
+    "coef": "premises_amounts"
+   },
+   "baseFreq": 2,
+   "scenario": "構内の事故や排水・排気により、来訪者や近隣に損害を与える。",
+   "measures": [
+    "構内協力会社との安全協議",
+    "有害物質の漏えい対策と点検"
+   ]
+  },
+  {
+   "id": "pl",
+   "name": "製品による賠償（PL）",
+   "domain": "liab",
+   "scope": "company",
+   "formula": {
+    "type": "pl"
+   },
+   "baseFreq": 2,
+   "scenario": "製品の欠陥により納入先や利用者に損害を与え、賠償を求められる。",
+   "measures": [
+    "契約の責任制限条項の整備",
+    "出荷検査記録の保管",
+    "海外販売分の補償範囲の確認"
+   ]
+  },
+  {
+   "id": "recall",
+   "name": "製品の回収（リコール）",
+   "domain": "liab",
+   "scope": "company",
+   "formula": {
+    "type": "recall"
+   },
+   "baseFreq": 2,
+   "scenario": "製品の不具合や異物混入が見つかり、出荷済み製品の回収・交換・告知の費用と、取引先からの損害賠償を負担する。",
+   "measures": [
+    "ロット単位の追跡",
+    "回収の判断基準と手順の文書化",
+    "回収の模擬訓練",
+    "リコール費用の補償の検討"
+   ]
+  },
+  {
+   "name": "食中毒",
+   "domain": "liab",
+   "scope": "company",
+   "formula": {
+    "type": "food"
+   },
+   "baseFreq": 2,
+   "scenario": "社員食堂や提供した食品で食中毒が起き、被害者への賠償、営業停止、信用の低下が重なる。",
+   "measures": [
+    "加熱・保存温度の記録",
+    "調理従事者の体調確認と記録",
+    "委託先（給食会社）の衛生管理と保険の確認",
+    "生産物賠償の補償の確認"
+   ],
+   "id": "foodpoison"
+  },
+  {
+   "name": "業務中・通勤中の自転車事故",
+   "domain": "liab",
+   "scope": "company",
+   "formula": {
+    "type": "fixedCoef",
+    "coef": "bike_amounts"
+   },
+   "baseFreq": 2,
+   "scenario": "従業員が業務中や通勤中に自転車で歩行者にけがをさせ、会社も使用者として賠償を求められる。",
+   "measures": [
+    "自転車の使用ルールと届出制",
+    "個人賠償責任保険の加入確認（補償額1億円以上など）",
+    "会社での包括付保の検討",
+    "ヘルメット着用と安全教育"
+   ],
+   "id": "bike"
+  },
+  {
+   "name": "マイカー通勤・業務使用の事故",
+   "domain": "liab",
+   "scope": "company",
+   "formula": {
+    "type": "fixedCoef",
+    "coef": "mycar_amounts"
+   },
+   "baseFreq": 2.5,
+   "scenario": "従業員がマイカーで業務中に重大事故を起こし、本人の任意保険で足りない分を会社が使用者として請求される。",
+   "measures": [
+    "マイカー使用規程と許可制",
+    "任意保険の補償額（対人・対物無制限など）の確認と記録",
+    "業務使用の範囲の明確化",
+    "使用者責任の補償の検討"
+   ],
+   "id": "mycar"
+  },
+  {
+   "id": "wc",
+   "name": "労働災害（使用者賠償）",
+   "domain": "people",
+   "scope": "company",
+   "formula": {
+    "type": "wc"
+   },
+   "baseFreq": 2,
+   "scenario": "重大な労働災害が起き、安全配慮義務違反として、本人や遺族から政府労災を超える損害賠償を求められる。",
+   "measures": [
+    "危険作業の手順書と教育",
+    "設備の安全装置の点検",
+    "協力会社を含む安全協議",
+    "使用者賠償の補償額の確認"
+   ]
+  },
+  {
+   "id": "epl",
+   "name": "雇用をめぐる争い（ハラスメント・メンタル・解雇）",
+   "domain": "people",
+   "scope": "company",
+   "formula": {
+    "type": "fixed",
+    "coef": "epl_amounts"
+   },
+   "baseFreq": 2,
+   "scenario": "ハラスメントや長時間労働によるメンタル不調、不当解雇を理由に、従業員から損害賠償を求められる。",
+   "measures": [
+    "相談窓口の設置と周知",
+    "管理職研修",
+    "労働時間の把握と是正",
+    "ストレスチェック後の面談",
+    "雇用慣行賠償の検討"
+   ]
+  },
+  {
+   "id": "auto",
+   "name": "自動車事故（社用車）",
+   "domain": "people",
+   "scope": "company",
+   "formula": {
+    "type": "fixed",
+    "coef": "auto_amounts"
+   },
+   "baseFreq": 2,
+   "scenario": "業務中の交通事故で第三者を死傷させる。",
+   "measures": [
+    "運転者教育",
+    "アルコール確認の記録",
+    "ドライブレコーダーの活用"
+   ]
+  },
+  {
+   "name": "国内取引先の貸倒れ",
+   "domain": "fin",
+   "scope": "company",
+   "formula": {
+    "type": "creditH",
+    "side": "dom"
+   },
+   "baseFreq": 3,
+   "scenario": "国内の取引先が倒産し、売掛金や受取手形が回収できなくなる。",
+   "measures": [
+    "与信限度額の設定と定期見直し",
+    "信用調査の定期実施",
+    "回収条件の短縮・担保の取得",
+    "取引信用保険の検討"
+   ],
+   "id": "credit_dom"
+  },
+  {
+   "name": "海外取引先の貸倒れ（輸出与信）",
+   "domain": "fin",
+   "scope": "company",
+   "formula": {
+    "type": "creditH",
+    "side": "ovs"
+   },
+   "baseFreq": 2.5,
+   "scenario": "輸出先の倒産、送金規制、政情不安などにより、海外の売掛金が回収できなくなる。",
+   "measures": [
+    "決済条件の見直し（前払い・信用状）",
+    "国別・取引先別の与信限度",
+    "貿易保険・輸出取引信用保険の検討",
+    "現地の信用調査"
+   ],
+   "id": "credit_ovs"
+  },
+  {
+   "id": "dno",
+   "name": "役員の賠償責任",
+   "domain": "fin",
+   "scope": "company",
+   "formula": {
+    "type": "dno"
+   },
+   "baseFreq": 1,
+   "scenario": "経営判断や監督の不備を理由に、株主や取引先から役員が訴えられる。",
+   "measures": [
+    "取締役会の議事記録の整備",
+    "役員賠償責任保険の確認"
+   ]
+  },
+  {
+   "id": "fraud",
+   "name": "従業員の不正（身元信用）",
+   "domain": "fin",
+   "scope": "company",
+   "formula": {
+    "type": "revenueRate",
+    "coef": "fraud_rates"
+   },
+   "baseFreq": 2,
+   "scenario": "経理担当者による着服や架空発注、営業担当者による横領が長期間発覚しない。",
+   "measures": [
+    "発注・支払・記帳の分離",
+    "抜き打ちの残高照合",
+    "長期担当者の配置換え",
+    "身元信用保険の検討"
+   ]
+  },
+  {
+   "id": "ovs_asset",
+   "name": "海外拠点の損害",
+   "domain": "ovs",
+   "scope": "overseas",
+   "formula": {
+    "type": "overseas"
+   },
+   "baseFreq": 2,
+   "scenario": "海外拠点が災害・政情不安で被害を受け、現地の保険で賄えない。",
+   "measures": [
+    "現地証券の写しの収集と内容確認",
+    "本社の保険で現地の不足を補う仕組みの検討",
+    "駐在員の緊急退避手順"
+   ]
+  },
+  {
+   "name": "海外出張・駐在中の事故・病気",
+   "domain": "ovs",
+   "scope": "company",
+   "formula": {
+    "type": "fixedCoef",
+    "coef": "travel_amounts"
+   },
+   "baseFreq": 2.5,
+   "scenario": "海外出張者や駐在員が現地で大けがや重い病気になり、高額な治療費や日本への搬送費がかかる。",
+   "measures": [
+    "会社での海外旅行保険の包括契約",
+    "治療・救援費用の補償額の見直し",
+    "渡航前の安全情報の確認と連絡体制",
+    "緊急退避の手順"
+   ],
+   "id": "travel"
+  }
+ ],
+ "umbrellaScopes": [
+  {
+   "label": "財物・利益（地震を除く）",
+   "domains": [
+    "prop",
+    "bi"
+   ],
+   "exclude": [
+    "acc_quake",
+    "ix_mfg_machine",
+    "quake",
+    "recall",
+    "supplier",
+    "tsunami"
+   ]
+  },
+  {
+   "label": "財物・利益（地震を含む）",
+   "domains": [
+    "prop",
+    "bi"
+   ],
+   "exclude": [
+    "ix_mfg_machine",
+    "recall",
+    "supplier"
+   ]
+  },
+  {
+   "label": "賠償責任",
+   "domains": [
+    "liab"
+   ],
+   "include": [
+    "wc",
+    "auto",
+    "mycar",
+    "bike",
+    "epl"
+   ],
+   "exclude": [
+    "ix_mfg_machine",
+    "recall",
+    "supplier"
+   ]
+  },
+  {
+   "label": "財物・利益・賠償（地震を除く）",
+   "domains": [
+    "prop",
+    "bi",
+    "liab"
+   ],
+   "include": [
+    "wc",
+    "auto",
+    "mycar",
+    "bike"
+   ],
+   "exclude": [
+    "acc_quake",
+    "ix_mfg_machine",
+    "quake",
+    "recall",
+    "supplier",
+    "tsunami"
+   ]
+  },
+  {
+   "label": "全リスク（地震を除く）",
+   "domains": [
+    "prop",
+    "bi",
+    "cyber",
+    "liab",
+    "people",
+    "fin",
+    "ovs"
+   ],
+   "exclude": [
+    "acc_quake",
+    "credit_dom",
+    "credit_ovs",
+    "dno",
+    "fraud",
+    "ix_mfg_machine",
+    "quake",
+    "recall",
+    "supplier",
+    "tsunami"
+   ]
+  }
+ ],
+ "scenarios": [
+  {
+   "id": "cyber",
+   "name": "サイバー攻撃（ランサムウェア）",
+   "primary": "cyber_stop",
+   "risks": [
+    "cyber_stop",
+    "cyber_leak"
+   ],
+   "spot": true,
+   "actions": {
+    "初動（当日）": [
+     "感染した端末をネットワークから切り離す（電源は切らない）",
+     "経営者・情報システム担当・保険代理店に連絡",
+     "被害範囲の確認と、影響を受ける取引先の洗い出し"
+    ],
+    "72時間以内": [
+     "調査会社による原因と被害範囲の調査",
+     "個人情報の漏えいのおそれがあれば、個人情報保護委員会への報告と本人通知の準備",
+     "警察への相談",
+     "バックアップからの復旧計画"
+    ],
+    "1か月以内": [
+     "復旧と再発防止策",
+     "取引先・顧客への説明",
+     "保険金の請求書類の整理"
+    ]
+   }
+  },
+  {
+   "id": "typhoon",
+   "name": "台風・強風",
+   "primary": "wind",
+   "risks": [
+    "wind",
+    "surge"
+   ],
+   "actions": {
+    "接近前（3日前〜）": [
+     "屋外の飛散物の撤去と固定",
+     "開口部・屋根の養生",
+     "重要在庫の高所への移動",
+     "出勤・操業の判断基準の確認"
+    ],
+    "通過後（当日）": [
+     "人の安全確認",
+     "被害の写真記録（保険請求に必要）",
+     "二次被害（雨漏り・停電）の防止"
+    ],
+    "1か月以内": [
+     "修理業者の手配と見積",
+     "保険金の請求",
+     "屋根・外壁の点検計画の見直し"
+    ]
+   }
+  },
+  {
+   "id": "flood",
+   "name": "洪水・内水",
+   "primary": "flood",
+   "risks": [
+    "flood",
+    "acc_flood"
+   ],
+   "actions": {
+    "警戒段階（水位情報）": [
+     "止水板・土のうの設置",
+     "受変電設備・重要設備の停止判断",
+     "在庫・金型・書類の上階への移動",
+     "従業員の早期帰宅・避難"
+    ],
+    "浸水後（〜72時間）": [
+     "人の安全確認",
+     "被害の写真記録",
+     "排水と清掃、感電・火災の防止",
+     "取引先への納期連絡"
+    ],
+    "1か月以内": [
+     "設備の修理・再調達",
+     "代替生産の手配",
+     "保険金の請求"
+    ]
+   }
+  },
+  {
+   "id": "quake",
+   "name": "地震・津波",
+   "primary": "quake",
+   "risks": [
+    "quake",
+    "tsunami",
+    "acc_quake"
+   ],
+   "actions": {
+    "発生直後": [
+     "身の安全の確保と避難",
+     "安否確認",
+     "火災・危険物漏えいの確認"
+    ],
+    "72時間以内": [
+     "災害対策本部の立ち上げ",
+     "建物・設備の被害確認",
+     "取引先・顧客への連絡",
+     "代替生産の検討"
+    ],
+    "1か月以内": [
+     "復旧計画と資金手当て",
+     "保険金の請求（地震の補償がある場合）",
+     "BCPの振り返り"
+    ]
+   }
+  },
+  {
+   "id": "fire",
+   "name": "火災・爆発",
+   "primary": "fire",
+   "risks": [
+    "fire"
+   ],
+   "actions": {
+    "発生時": [
+     "通報・初期消火・避難",
+     "安否確認",
+     "近隣への延焼防止"
+    ],
+    "72時間以内": [
+     "消防・警察の現場検証への協力",
+     "被害の記録",
+     "取引先への連絡と代替生産の検討"
+    ],
+    "1か月以内": [
+     "原因の特定と再発防止策",
+     "保険金の請求",
+     "復旧計画"
+    ]
+   }
+  },
+  {
+   "id": "lightning",
+   "name": "落雷・異常電圧",
+   "primary": "lightning",
+   "risks": [
+    "lightning"
+   ],
+   "actions": {
+    "発生時": [
+     "停止した設備の安全確認",
+     "火災の有無の確認"
+    ],
+    "72時間以内": [
+     "故障した制御盤・基板・サーバーの特定",
+     "予備品への交換、メーカーの手配",
+     "被害の記録"
+    ],
+    "1か月以内": [
+     "雷サージ対策の見直し",
+     "保険金の請求"
+    ]
+   }
+  },
+  {
+   "id": "injury",
+   "name": "従業員の重大な怪我",
+   "primary": "wc",
+   "risks": [
+    "wc"
+   ],
+   "bodily": true,
+   "actions": {
+    "発生時": [
+     "救護・救急搬送",
+     "二次災害の防止と現場の保全",
+     "家族への連絡"
+    ],
+    "72時間以内": [
+     "労働基準監督署への報告",
+     "原因の調査",
+     "協力会社・派遣元への連絡"
+    ],
+    "1か月以内": [
+     "再発防止策と教育",
+     "労災保険・上乗せ補償の手続き",
+     "本人・遺族との対応方針（弁護士への相談）"
+    ]
+   }
+  },
+  {
+   "id": "mental",
+   "name": "メンタル不調・ハラスメントの訴訟",
+   "primary": "epl",
+   "risks": [
+    "epl"
+   ],
+   "actions": {
+    "相談を受けたとき": [
+     "事実関係の聞き取りと記録",
+     "本人の就業上の配慮",
+     "産業医への相談"
+    ],
+    "申し立て・訴訟の段階": [
+     "弁護士への相談",
+     "保険会社・代理店への連絡",
+     "社内調査と再発防止策"
+    ],
+    "再発防止": [
+     "管理職研修",
+     "労働時間の管理の徹底"
+    ]
+   }
+  },
+  {
+   "id": "recall",
+   "name": "製品事故・リコール",
+   "primary": "recall",
+   "risks": [
+    "recall",
+    "pl"
+   ],
+   "bodily": true,
+   "actions": {
+    "発覚時": [
+     "事実確認と影響範囲（ロット）の特定",
+     "出荷停止",
+     "経営者・品質保証・保険代理店への連絡"
+    ],
+    "72時間以内": [
+     "回収の判断",
+     "監督官庁・取引先への報告",
+     "告知の準備"
+    ],
+    "1か月以内": [
+     "回収と交換",
+     "原因の特定と再発防止",
+     "費用の集計と保険金の請求"
+    ]
+   }
+  },
+  {
+   "id": "food",
+   "name": "食中毒",
+   "primary": "foodpoison",
+   "risks": [
+    "foodpoison"
+   ],
+   "bodily": true,
+   "actions": {
+    "発覚時": [
+     "被害者の受診の手配",
+     "保健所への連絡",
+     "提供の停止と検体の保存"
+    ],
+    "72時間以内": [
+     "保健所の調査への協力",
+     "被害者・家族への対応",
+     "委託先との連絡"
+    ],
+    "1か月以内": [
+     "衛生管理の見直し",
+     "賠償の対応",
+     "営業再開の準備"
+    ]
+   }
+  },
+  {
+   "id": "traffic",
+   "name": "交通事故（社用車・マイカー・自転車）",
+   "primary": "auto",
+   "risks": [
+    "auto",
+    "mycar",
+    "bike"
+   ],
+   "bodily": true,
+   "actions": {
+    "発生時": [
+     "負傷者の救護と通報",
+     "二次事故の防止",
+     "会社と保険会社への連絡"
+    ],
+    "72時間以内": [
+     "事故状況の記録（ドライブレコーダー）",
+     "被害者への対応方針",
+     "業務中かどうかの確認"
+    ],
+    "1か月以内": [
+     "再発防止の教育",
+     "マイカー・自転車の使用規程の見直し"
+    ]
+   }
+  },
+  {
+   "id": "credit",
+   "name": "取引先の倒産・貸倒れ",
+   "primary": "credit_dom",
+   "risks": [
+    "credit_dom",
+    "credit_ovs"
+   ],
+   "actions": {
+    "兆候の段階": [
+     "支払遅延・取引条件の変更の把握",
+     "与信限度の引き下げ",
+     "担保・保証の確認"
+    ],
+    "倒産時": [
+     "債権額の確定と債権届出",
+     "商品の引き揚げ・相殺の検討",
+     "保険金の請求（取引信用保険がある場合）"
+    ],
+    "その後": [
+     "資金繰りの確認",
+     "与信管理の見直し"
+    ]
+   }
+  },
+  {
+   "id": "travel",
+   "name": "海外出張・駐在中の事故・病気",
+   "primary": "travel",
+   "risks": [
+    "travel",
+    "ovs_asset"
+   ],
+   "bodily": true,
+   "actions": {
+    "発生時": [
+     "本人の安全確保と医療機関の手配",
+     "保険会社のアシスタンスへの連絡",
+     "家族への連絡"
+    ],
+    "72時間以内": [
+     "治療費の支払い方法の確認",
+     "日本への搬送の判断",
+     "業務の引き継ぎ"
+    ],
+    "その後": [
+     "補償額の見直し",
+     "渡航時の安全ルールの見直し"
+    ]
+   }
+  },
+  {
+   "id": "supplier",
+   "name": "主要仕入先の停止",
+   "primary": "supplier",
+   "risks": [
+    "supplier"
+   ],
+   "actions": {
+    "発生時": [
+     "停止の範囲と期間の確認",
+     "在庫で何日もつかの確認"
+    ],
+    "72時間以内": [
+     "代替品・代替仕入先の手配",
+     "顧客への納期連絡"
+    ],
+    "1か月以内": [
+     "複数社購買の検討",
+     "安全在庫の見直し"
+    ]
+   }
+  },
+  {
+   "id": "fraud",
+   "name": "従業員の不正",
+   "primary": "fraud",
+   "risks": [
+    "fraud"
+   ],
+   "actions": {
+    "発覚時": [
+     "証拠の保全",
+     "関係者への聞き取り",
+     "弁護士への相談"
+    ],
+    "その後": [
+     "損害額の確定と回収",
+     "身元保証人・保険への請求",
+     "内部統制の見直し"
+    ]
+   }
+  }
+ ],
+ "umbrellaNote": "包括（アンブレラ）は、一般にリコール費用、仕入先の停止による損失、機械の故障などを対象外とすることが多いため、初期設定ではこれらを除いています。実際の対象範囲は約款で確認してください。"
 }
